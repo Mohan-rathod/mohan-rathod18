@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>JNV Result Automation 2026–27</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<style>
+:root{--g:#16452c;--g2:#245d3e;--bg:#f3f6f4;--card:#fff;--txt:#17211b;--muted:#66736b;--line:#dbe3de;--danger:#b3261e;--ok:#1d7a46}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--txt)}
+button,input,select{font:inherit}button{cursor:pointer;border:0}.hidden{display:none!important}
+.login-wrap{min-height:100vh;background:linear-gradient(145deg,#0b3421,#174d31);display:grid;place-items:center;padding:20px}
+.login{width:min(520px,100%);background:#fff;border-radius:28px;padding:34px;box-shadow:0 20px 60px #0004}.logo{width:112px;height:112px;border-radius:50%;background:#edf4ef;display:grid;place-items:center;margin:0 auto 20px;font-size:44px;font-weight:800;color:var(--g)}
+h1{font-size:32px;line-height:1.05;margin:12px 0;text-align:center}.sub{text-align:center;color:var(--muted);font-size:18px}.year{text-align:center;font-weight:800;color:var(--muted)}
+.field{margin:14px 0}.field label{display:block;font-size:13px;font-weight:700;margin-bottom:6px}.field input,.field select{width:100%;padding:13px 14px;border:1px solid var(--line);border-radius:12px;background:#fff}
+.primary{background:var(--g);color:#fff;padding:13px 18px;border-radius:12px;font-weight:750;width:100%}.secondary{background:#edf3ef;color:var(--g);padding:10px 14px;border-radius:10px;font-weight:700}.danger{background:#fff0ef;color:var(--danger);padding:10px 14px;border-radius:10px;font-weight:700}
+.err{color:var(--danger);margin-top:12px;font-weight:650}.hint{color:var(--muted);font-size:13px;margin-top:14px}
+.app{display:flex;min-height:100vh}.side{width:250px;background:#103a25;color:#fff;padding:18px;position:fixed;inset:0 auto 0 0;z-index:5}.brand{font-size:24px;font-weight:850;margin:8px 8px 22px}.nav button{display:block;width:100%;text-align:left;background:transparent;color:#dbeae1;padding:12px;border-radius:10px;margin:3px 0}.nav button.active,.nav button:hover{background:#285d41;color:#fff}.main{margin-left:250px;width:calc(100% - 250px);padding:24px}.top{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-bottom:22px}.top h2{margin:0;font-size:30px}.role{background:#fff;border:1px solid var(--line);padding:9px 13px;border-radius:999px}
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:0 3px 14px #173a2010}.kpi .label{color:var(--muted)}.kpi .num{font-size:36px;font-weight:850;margin-top:8px}.section-title{display:flex;justify-content:space-between;align-items:center;margin:25px 0 12px}.section-title h3{margin:0}.table-wrap{overflow:auto;background:#fff;border:1px solid var(--line);border-radius:16px}.table{width:100%;border-collapse:collapse;min-width:650px}.table th,.table td{padding:11px 12px;border-bottom:1px solid var(--line);text-align:left}.table th{background:#f5f8f6;font-size:13px}.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}.toolbar input,.toolbar select{padding:10px;border:1px solid var(--line);border-radius:10px;background:#fff}.actions{display:flex;gap:7px;flex-wrap:wrap}.badge{padding:4px 8px;border-radius:999px;background:#edf4ef;color:var(--g);font-size:12px;font-weight:750}
+.modal{position:fixed;inset:0;background:#0006;display:grid;place-items:center;padding:20px;z-index:20}.modal-box{background:#fff;width:min(680px,100%);max-height:90vh;overflow:auto;border-radius:20px;padding:22px}.modal-head{display:flex;justify-content:space-between;align-items:center}.close{background:#eee;border-radius:50%;width:36px;height:36px}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.full{grid-column:1/-1}
+.marks-table input{width:90px;padding:8px;border:1px solid var(--line);border-radius:8px}.status{margin-top:12px;font-weight:700}.empty{padding:35px;text-align:center;color:var(--muted)}
+@media(max-width:850px){.side{width:72px;padding:10px}.brand{font-size:0;text-align:center}.brand:after{content:"JNV";font-size:20px}.nav button{font-size:0;text-align:center}.nav button:before{content:"•";font-size:24px}.main{margin-left:72px;width:calc(100% - 72px);padding:15px}.grid{grid-template-columns:1fr 1fr}.top h2{font-size:24px}.form-grid{grid-template-columns:1fr}}
+@media(max-width:520px){.grid{grid-template-columns:1fr}.login{padding:24px}.top{align-items:flex-start;flex-direction:column}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+const CONFIG={
+  SUPABASE_URL:"YOUR_SUPABASE_URL",
+  SUPABASE_ANON_KEY:"YOUR_SUPABASE_ANON_KEY"
+};
+
+const state={sb:null,user:null,profile:null,page:"dashboard",students:[],classes:[],sections:[],subjects:[],exams:[],teachers:[],assignments:[]};
+
+function $(id){return document.getElementById(id)}
+function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
+function toast(msg,ok=true){const e=$("toast");if(e){e.textContent=msg;e.style.background=ok?"#1d7a46":"#b3261e";e.classList.remove("hidden");setTimeout(()=>e.classList.add("hidden"),3000)}}
+function configured(){return CONFIG.SUPABASE_URL.startsWith("http")&&!CONFIG.SUPABASE_URL.includes("YOUR_")&&CONFIG.SUPABASE_ANON_KEY.length>30&&!CONFIG.SUPABASE_ANON_KEY.includes("YOUR_")}
+
+function loginHTML(){
+return `<div class="login-wrap"><div class="login">
+<div class="logo">JNV</div><h1>JNV Result Automation</h1><div class="sub">Online Multi-User System</div><div class="year">Academic Year 2026–27</div>
+<div class="field"><label>Email address</label><input id="email" type="email" autocomplete="username"></div>
+<div class="field"><label>Password</label><input id="password" type="password" autocomplete="current-password"></div>
+<button class="primary" onclick="signIn()">Sign in</button>
+<div id="loginErr" class="err"></div>
+<div class="hint">Connected to your Supabase project. Passwords are handled by Supabase Authentication.</div>
+</div></div>`}
+
+function shellHTML(){
+return `<div class="app"><aside class="side"><div class="brand">JNV Result</div><div class="nav">
+${nav("dashboard","Dashboard","▣")}
+${nav("students","Students","●")}
+${nav("classes","Classes & Sections","◆")}
+${nav("subjects","Subjects","◇")}
+${nav("exams","Examinations","▤")}
+${nav("marks","Marks Entry","✎")}
+${nav("results","Results","★")}
+${isAdmin()?nav("teachers","Teachers","♟"):""}
+${isAdmin()?nav("assign","Assignments","⇄"):""}
+<button onclick="signOut()">⇥ Sign out</button>
+</div></aside><main class="main"><div class="top"><div><h2 id="pageTitle">Dashboard</h2><div style="color:var(--muted)">PM SHRI Jawahar Navodaya Vidyalaya, Wargal, Siddipet</div></div><div class="role">${esc(state.profile?.role||"teacher")}</div></div><div id="content"></div></main></div><div id="modal"></div><div id="toast" class="hidden" style="position:fixed;right:18px;bottom:18px;color:#fff;padding:12px 16px;border-radius:10px;z-index:50;font-weight:700"></div>`}
+
+function nav(page,label,icon){return `<button class="${state.page===page?"active":""}" onclick="go('${page}')">${icon} &nbsp;${label}</button>`}
+function isAdmin(){return (state.profile?.role||"teacher").toLowerCase()==="admin"}
+
+async function init(){
+ if(!configured()){document.body.innerHTML=loginHTML()+`<div style="position:fixed;bottom:12px;left:12px;right:12px;background:#fff;padding:12px;border-radius:10px;border:1px solid #ddd;text-align:center">Open this file and replace <b>YOUR_SUPABASE_URL</b> and <b>YOUR_SUPABASE_ANON_KEY</b> in the CONFIG section.</div>`;return}
+ state.sb=supabase.createClient(CONFIG.SUPABASE_URL,CONFIG.SUPABASE_ANON_KEY);
+ const {data:{session}}=await state.sb.auth.getSession();
+ if(!session){document.body.innerHTML=loginHTML();return}
+ state.user=session.user; await loadProfile(); renderShell(); await go("dashboard");
+ state.sb.auth.onAuthStateChange(async(_e,s)=>{state.user=s?.user||null;if(!s){location.reload()}});
+}
+async function signIn(){
+ $("loginErr").textContent="";
+ const {data,error}=await state.sb.auth.signInWithPassword({email:$("email").value.trim(),password:$("password").value});
+ if(error){$("loginErr").textContent="Sign-in error: "+error.message;return}
+ state.user=data.user; await loadProfile(); renderShell(); go("dashboard");
+}
+async function signOut(){await state.sb.auth.signOut();location.reload()}
+async function loadProfile(){
+ let p=null;
+ const a=await state.sb.from("profiles").select("*").eq("id",state.user.id).maybeSingle();
+ if(a.data)p=a.data;
+ if(!p){
+   const b=await state.sb.from("profiles").select("*").eq("active",true).limit(1).maybeSingle();
+   if(b.data)p=b.data;
+ }
+ state.profile=p||{role:"teacher",full_name:state.user.email};
+}
+function renderShell(){document.body.innerHTML=shellHTML()}
+async function go(page){state.page=page;document.body.innerHTML=shellHTML();$("content").innerHTML='<div class="card">Loading…</div>';try{if(page==="dashboard")await dashboard();else if(page==="students")await students();else if(page==="classes")await classes();else if(page==="subjects")await subjects();else if(page==="exams")await exams();else if(page==="marks")await marks();else if(page==="results")await results();else if(page==="teachers")await teachers();else if(page==="assign")await assignments();}catch(e){$("content").innerHTML=`<div class="card"><b>Error</b><div class="err">${esc(e.message)}</div></div>`}}
+
+async function count(table){const r=await state.sb.from(table).select("*",{count:"exact",head:true});return r.count||0}
+async function dashboard(){
+ const [st,cl,su,ex]=await Promise.all([count("students"),count("classes"),count("subjects"),count("examinations")]);
+ $("content").innerHTML=`<div class="grid">
+ <div class="card kpi"><div class="label">Students</div><div class="num">${st}</div></div>
+ <div class="card kpi"><div class="label">Classes</div><div class="num">${cl}</div></div>
+ <div class="card kpi"><div class="label">Subjects</div><div class="num">${su}</div></div>
+ <div class="card kpi"><div class="label">Examinations</div><div class="num">${ex}</div></div></div>
+ <div class="section-title"><h3>Quick actions</h3></div>
+ <div class="grid">
+ <div class="card"><h3>Students</h3><p>Add and manage student records.</p><button class="secondary" onclick="go('students')">Open Students</button></div>
+ <div class="card"><h3>Marks Entry</h3><p>Enter subject-wise marks online.</p><button class="secondary" onclick="go('marks')">Enter Marks</button></div>
+ <div class="card"><h3>Results</h3><p>Calculate totals, percentage, grades and rank.</p><button class="secondary" onclick="go('results')">View Results</button></div>
+ <div class="card"><h3>Examinations</h3><p>Create PWT, Term, Annual and other exams.</p><button class="secondary" onclick="go('exams')">Manage Exams</button></div></div>`;
+}
+
+async function students(){
+ const r=await state.sb.from("students").select("*").order("roll_no",{ascending:true});
+ if(r.error)throw r.error;state.students=r.data||[];
+ $("content").innerHTML=`<div class="toolbar"><input id="studentSearch" placeholder="Search name / roll / admission" oninput="filterStudents()">${isAdmin()?'<button class="primary" style="width:auto" onclick="studentModal()">+ Add Student</button>':""}</div><div id="studentTable"></div>`;
+ renderStudentTable();
+}
+function filterStudents(){renderStudentTable(($("studentSearch")?.value||"").toLowerCase())}
+function renderStudentTable(q=""){let d=state.students.filter(s=>!q||[s.full_name,s.roll_no,s.admission_no].some(x=>String(x||"").toLowerCase().includes(q)));$("studentTable").innerHTML=d.length?`<div class="table-wrap"><table class="table"><thead><tr><th>Roll</th><th>Admission</th><th>Name</th><th>Gender</th><th>Class</th><th>Section</th></tr></thead><tbody>${d.map(s=>`<tr><td>${esc(s.roll_no)}</td><td>${esc(s.admission_no)}</td><td>${esc(s.full_name)}</td><td>${esc(s.gender)}</td><td>${esc(s.class_id)}</td><td>${esc(s.section_id)}</td></tr>`).join("")}</tbody></table></div>`:'<div class="card empty">No students found.</div>'}
+async function studentModal(){
+ await loadLookups();$("modal").innerHTML=`<div class="modal"><div class="modal-box"><div class="modal-head"><h3>Add Student</h3><button class="close" onclick="closeModal()">×</button></div><div class="form-grid">
+<div class="field"><label>Admission No</label><input id="s_adm"></div><div class="field"><label>Roll No</label><input id="s_roll"></div>
+<div class="field full"><label>Full Name</label><input id="s_name"></div>
+<div class="field"><label>Gender</label><select id="s_gender"><option value="">Select</option><option>Male</option><option>Female</option></select></div>
+<div class="field"><label>Date of Birth</label><input id="s_dob" type="date"></div>
+<div class="field"><label>Class</label><select id="s_class">${state.classes.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join("")}</select></div>
+<div class="field"><label>Section</label><select id="s_section">${state.sections.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join("")}</select></div>
+<div class="field"><label>House</label><input id="s_house"></div><div class="field"><label>Father Name</label><input id="s_father"></div><div class="field"><label>Mother Name</label><input id="s_mother"></div>
+</div><button class="primary" onclick="saveStudent()">Save Student</button></div></div>`}
+async function saveStudent(){const x={admission_no:$("s_adm").value.trim(),roll_no:$("s_roll").value.trim(),full_name:$("s_name").value.trim(),gender:$("s_gender").value,dob:$("s_dob").value||null,class_id:$("s_class").value||null,section_id:$("s_section").value||null,house:$("s_house").value.trim(),father_name:$("s_father").value.trim(),mother_name:$("s_mother").value.trim()};const r=await state.sb.from("students").insert(x);if(r.error){toast(r.error.message,false);return}closeModal();toast("Student saved");students()}
+
+async function loadLookups(){
+ const [c,s,sub,e]=await Promise.all([state.sb.from("classes").select("*").order("name"),state.sb.from("sections").select("*").order("name"),state.sb.from("subjects").select("*").order("name"),state.sb.from("examinations").select("*").order("exam_date",{ascending:false})]);
+ state.classes=c.data||[];state.sections=s.data||[];state.subjects=sub.data||[];state.exams=e.data||[];
+}
+async function classes(){
+ await loadLookups();$("content").innerHTML=`<div class="section-title"><h3>Classes</h3>${isAdmin()?'<button class="secondary" onclick="simpleModal(\'class\')">+ Add Class</button>':""}</div><div class="table-wrap"><table class="table"><thead><tr><th>Name</th><th>Order</th><th>Active</th></tr></thead><tbody>${state.classes.map(x=>`<tr><td>${esc(x.name)}</td><td>${esc(x.display_order)}</td><td>${x.active?"Yes":"No"}</td></tr>`).join("")}</tbody></table></div><div class="section-title"><h3>Sections</h3>${isAdmin()?'<button class="secondary" onclick="simpleModal(\'section\')">+ Add Section</button>':""}</div><div class="table-wrap"><table class="table"><thead><tr><th>Name</th><th>Class ID</th><th>Active</th></tr></thead><tbody>${state.sections.map(x=>`<tr><td>${esc(x.name)}</td><td>${esc(x.class_id)}</td><td>${x.active?"Yes":"No"}</td></tr>`).join("")}</tbody></table></div>`}
+async function subjects(){
+ await loadLookups();$("content").innerHTML=`<div class="section-title"><h3>Subjects</h3>${isAdmin()?'<button class="secondary" onclick="subjectModal()">+ Add Subject</button>':""}</div><div class="table-wrap"><table class="table"><thead><tr><th>Code</th><th>Subject</th><th>Active</th></tr></thead><tbody>${state.subjects.map(x=>`<tr><td>${esc(x.code)}</td><td>${esc(x.name)}</td><td>${x.active?"Yes":"No"}</td></tr>`).join("")}</tbody></table></div>`}
+async function exams(){
+ await loadLookups();$("content").innerHTML=`<div class="section-title"><h3>Examinations</h3>${isAdmin()?'<button class="secondary" onclick="examModal()">+ Create Examination</button>':""}</div><div class="table-wrap"><table class="table"><thead><tr><th>Examination</th><th>Academic Year</th><th>Date</th><th>Status</th><th>Class</th></tr></thead><tbody>${state.exams.map(x=>`<tr><td>${esc(x.name)}</td><td>${esc(x.academic_year)}</td><td>${esc(x.exam_date)}</td><td><span class="badge">${esc(x.status||"draft")}</span></td><td>${esc(x.class_id)}</td></tr>`).join("")}</tbody></table></div>`}
+
+async function marks(){
+ await loadLookups();
+ const students=(await state.sb.from("students").select("*").order("roll_no")).data||[];
+ $("content").innerHTML=`<div class="card"><div class="toolbar"><select id="m_exam"><option value="">Select examination</option>${state.exams.map(x=>`<option value="${x.id}">${esc(x.name)} — ${esc(x.academic_year)}</option>`).join("")}</select><select id="m_subject"><option value="">Select subject</option>${state.subjects.map(x=>`<option value="${x.id}">${esc(x.code)} — ${esc(x.name)}</option>`).join("")}</select><button class="secondary" onclick="loadMarkGrid()">Load Students</button></div><div id="markGrid"></div></div>`;
+}
+async function loadMarkGrid(){
+ const ex=$("m_exam").value, sub=$("m_subject").value;if(!ex||!sub){toast("Select examination and subject",false);return}
+ const students=(await state.sb.from("students").select("*").order("roll_no")).data||[];
+ const old=(await state.sb.from("marks").select("*").eq("examination_id",ex).eq("subject_id",sub)).data||[];
+ const map=new Map(old.map(x=>[x.student_id,x]));
+ $("markGrid").innerHTML=`<div class="toolbar"><input id="markMax" type="number" value="100" min="1" style="width:120px"><button class="primary" style="width:auto" onclick="saveMarks()">Save Marks</button></div><div class="table-wrap"><table class="table marks-table"><thead><tr><th>Roll</th><th>Student</th><th>Marks</th><th>Attendance</th></tr></thead><tbody>${students.map(s=>{let m=map.get(s.id)||{};return `<tr><td>${esc(s.roll_no)}</td><td>${esc(s.full_name)}</td><td><input class="mk" data-id="${s.id}" type="number" min="0" value="${m.marks??""}"></td><td><select class="att" data-id="${s.id}"><option ${m.attendance_status==="Present"||!m.attendance_status?"selected":""}>Present</option><option ${m.attendance_status==="Absent"?"selected":""}>Absent</option></select></td></tr>`}).join("")}</tbody></table></div>`}
+async function saveMarks(){
+ const ex=$("m_exam").value,sub=$("m_subject").value,max=Number($("markMax").value)||100;const inputs=[...document.querySelectorAll(".mk")];let rows=[];
+ for(const i of inputs){const val=i.value.trim();if(val==="")continue;const n=Number(val);if(n<0||n>max){toast("Invalid mark for one or more students",false);return}rows.push({examination_id:ex,subject_id:sub,student_id:i.dataset.id,marks:n,attendance_status:document.querySelector(`.att[data-id="${i.dataset.id}"]`).value,status:"draft",entered_by:state.user.id,entered_at:new Date().toISOString(),updated_at:new Date().toISOString()})}
+ if(!rows.length){toast("No marks entered",false);return}
+ const r=await state.sb.from("marks").upsert(rows,{onConflict:"examination_id,subject_id,student_id"});if(r.error){toast(r.error.message,false);return}toast(`${rows.length} marks saved successfully`)}
+async function results(){
+ await loadLookups();const ex=state.exams[0];if(!ex){$("content").innerHTML='<div class="card empty">Create an examination first.</div>';return}
+ const students=(await state.sb.from("students").select("*").order("roll_no")).data||[];const mr=(await state.sb.from("marks").select("student_id,marks,subject_id,subjects(name)").eq("examination_id",ex.id)).data||[];
+ const by=new Map();mr.forEach(m=>{if(!by.has(m.student_id))by.set(m.student_id,[]);by.get(m.student_id).push(Number(m.marks)||0)});
+ const rows=students.map(s=>{let a=by.get(s.id)||[],total=a.reduce((x,y)=>x+y,0),max=a.length*100,pct=max?total/max*100:0;return {...s,total,max,pct,grade:grade(pct),status:pct>=33?"PASS":"FAIL"}}).sort((a,b)=>b.pct-a.pct);
+ rows.forEach((r,i)=>r.rank=r.pct>0?i+1:"—");
+ $("content").innerHTML=`<div class="toolbar"><select id="resultExam" onchange="resultsForExam(this.value)">${state.exams.map(x=>`<option value="${x.id}" ${x.id===ex.id?"selected":""}>${esc(x.name)} — ${esc(x.academic_year)}</option>`).join("")}</select><button class="secondary" onclick="exportResults()">Export CSV</button></div><div id="resultTable">${resultTable(rows,ex)}</div>`;
+ window._resultRows=rows;window._resultExam=ex;
+}
+function resultTable(rows,ex){return `<div class="table-wrap"><table class="table"><thead><tr><th>Rank</th><th>Roll</th><th>Name</th><th>Total</th><th>%</th><th>Grade</th><th>Status</th><th></th></tr></thead><tbody>${rows.map(r=>`<tr><td>${r.rank}</td><td>${esc(r.roll_no)}</td><td>${esc(r.full_name)}</td><td>${r.total}/${r.max}</td><td>${r.pct.toFixed(2)}</td><td>${r.grade}</td><td><span class="badge">${r.status}</span></td><td><button class="secondary" onclick='pdfReport(${JSON.stringify(r).replace(/'/g,"&#39;")},${JSON.stringify(ex).replace(/'/g,"&#39;")})'>PDF</button></td></tr>`).join("")}</tbody></table></div>`}
+async function resultsForExam(id){const all=(await state.sb.from("students").select("*").order("roll_no")).data||[];const mr=(await state.sb.from("marks").select("student_id,marks,subject_id").eq("examination_id",id)).data||[];const by=new Map();mr.forEach(m=>{if(!by.has(m.student_id))by.set(m.student_id,[]);by.get(m.student_id).push(Number(m.marks)||0)});const ex=state.exams.find(x=>x.id===id);const rows=all.map(s=>{let a=by.get(s.id)||[],total=a.reduce((x,y)=>x+y,0),max=a.length*100,pct=max?total/max*100:0;return {...s,total,max,pct,grade:grade(pct),status:pct>=33?"PASS":"FAIL"}}).sort((a,b)=>b.pct-a.pct);rows.forEach((r,i)=>r.rank=r.pct>0?i+1:"—");$("resultTable").innerHTML=resultTable(rows,ex);window._resultRows=rows;window._resultExam=ex}
+function grade(p){return p>=90?"A1":p>=80?"A2":p>=70?"B1":p>=60?"B2":p>=50?"C":p>=40?"D":p>=33?"E":"F"}
+function exportResults(){const rows=window._resultRows||[];const csv=["Rank,Roll,Name,Total,Max,Percentage,Grade,Status",...rows.map(r=>[r.rank,r.roll_no,`"${String(r.full_name).replaceAll('"','""')}"`,r.total,r.max,r.pct.toFixed(2),r.grade,r.status].join(","))].join("\\n");const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download="JNV_Class_Result.csv";a.click()}
+function pdfReport(r,ex){const {jsPDF}=window.jspdf;const d=new jsPDF();d.setFontSize(18);d.text("PM SHRI JAWAHAR NAVODAYA VIDYALAYA, WARGAL",105,20,{align:"center"});d.setFontSize(14);d.text("STUDENT REPORT CARD — 2026–27",105,30,{align:"center"});d.line(15,35,195,35);d.setFontSize(11);d.text(`Examination: ${ex?.name||""}`,20,48);d.text(`Student: ${r.full_name}`,20,58);d.text(`Roll No: ${r.roll_no||""}`,20,68);d.text(`Admission No: ${r.admission_no||""}`,20,78);d.text(`Total: ${r.total} / ${r.max}`,20,92);d.text(`Percentage: ${r.pct.toFixed(2)}%`,20,102);d.text(`Grade: ${r.grade}`,20,112);d.text(`Result: ${r.status}`,20,122);d.text(`Rank: ${r.rank}`,20,132);d.text("Generated by JNV Result Automation",20,270);d.save(`${(r.roll_no||"student")}_${String(r.full_name).replace(/\\s+/g,"_")}_Report.pdf`)}
+async function teachers(){const r=await state.sb.from("profiles").select("*").order("full_name");if(r.error)throw r.error;state.teachers=r.data||[];$("content").innerHTML=`<div class="section-title"><h3>Teachers / Staff</h3></div><div class="table-wrap"><table class="table"><thead><tr><th>Name</th><th>Employee ID</th><th>Designation</th><th>Role</th><th>Active</th></tr></thead><tbody>${state.teachers.map(x=>`<tr><td>${esc(x.full_name)}</td><td>${esc(x.employee_id)}</td><td>${esc(x.designation)}</td><td>${esc(x.role)}</td><td>${x.active?"Yes":"No"}</td></tr>`).join("")}</tbody></table></div>`}
+async function assignments(){await loadLookups();const r=await state.sb.from("teacher_subjects").select("*");state.assignments=r.data||[];$("content").innerHTML=`<div class="section-title"><h3>Teacher–Subject Assignments</h3><button class="secondary" onclick="assignmentModal()">+ Assign</button></div><div class="table-wrap"><table class="table"><thead><tr><th>Teacher ID</th><th>Subject ID</th><th>Class ID</th><th>Section ID</th><th>Year</th></tr></thead><tbody>${state.assignments.map(x=>`<tr><td>${esc(x.teacher_id)}</td><td>${esc(x.subject_id)}</td><td>${esc(x.class_id)}</td><td>${esc(x.section_id)}</td><td>${esc(x.academic_year)}</td></tr>`).join("")}</tbody></table></div>`}
+function closeModal(){$("modal").innerHTML=""}
+function simpleModal(type){if(type==="class")$("modal").innerHTML=`<div class="modal"><div class="modal-box"><div class="modal-head"><h3>Add Class</h3><button class="close" onclick="closeModal()">×</button></div><div class="field"><label>Class name</label><input id="x_name"></div><button class="primary" onclick="saveClass()">Save</button></div></div>`;else $("modal").innerHTML=`<div class="modal"><div class="modal-box"><div class="modal-head"><h3>Add Section</h3><button class="close" onclick="closeModal()">×</button></div><div class="field"><label>Section name</label><input id="x_name"></div><div class="field"><label>Class</label><select id="x_class">${state.classes.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join("")}</select></div><button class="primary" onclick="saveSection()">Save</button></div></div>`}
+async function saveClass(){const r=await state.sb.from("classes").insert({name:$("x_name").value.trim(),active:true});if(r.error){toast(r.error.message,false);return}closeModal();classes()}
+async function saveSection(){const r=await state.sb.from("sections").insert({name:$("x_name").value.trim(),class_id:$("x_class").value,active:true});if(r.error){toast(r.error.message,false);return}closeModal();classes()}
+function subjectModal(){$("modal").innerHTML=`<div class="modal"><div class="modal-box"><div class="modal-head"><h3>Add Subject</h3><button class="close" onclick="closeModal()">×</button></div><div class="field"><label>Code</label><input id="sub_code"></div><div class="field"><label>Name</label><input id="sub_name"></div><button class="primary" onclick="saveSubject()">Save</button></div></div>`}
+async function saveSubject(){const r=await state.sb.from("subjects").insert({code:$("sub_code").value.trim(),name:$("sub_name").value.trim(),active:true});if(r.error){toast(r.error.message,false);return}closeModal();subjects()}
+function examModal(){$("modal").innerHTML=`<div class="modal"><div class="modal-box"><div class="modal-head"><h3>Create Examination</h3><button class="close" onclick="closeModal()">×</button></div><div class="form-grid"><div class="field"><label>Name</label><input id="e_name" placeholder="PWT I / Term I / Annual"></div><div class="field"><label>Academic Year</label><input id="e_year" value="2026-27"></div><div class="field"><label>Exam Date</label><input id="e_date" type="date"></div><div class="field"><label>Class</label><select id="e_class"><option value="">All classes</option>${state.classes.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join("")}</select></div><div class="field"><label>Pass Marks</label><input id="e_pass" type="number" value="33"></div></div><button class="primary" onclick="saveExam()">Create</button></div></div>`}
+async function saveExam(){const r=await state.sb.from("examinations").insert({name:$("e_name").value.trim(),academic_year:$("e_year").value.trim(),exam_date:$("e_date").value||null,class_id:$("e_class").value||null,pass_marks:Number($("e_pass").value)||33,status:"draft",created_by:state.user.id});if(r.error){toast(r.error.message,false);return}closeModal();exams()}
+function assignmentModal(){state.teachers=state.teachers.length?state.teachers:[];$("modal").innerHTML=`<div class="modal"><div class="modal-box"><div class="modal-head"><h3>Assign Teacher</h3><button class="close" onclick="closeModal()">×</button></div><div class="field"><label>Teacher</label><select id="a_teacher">${state.teachers.map(x=>`<option value="${x.id}">${esc(x.full_name)} — ${esc(x.employee_id)}</option>`).join("")}</select></div><div class="field"><label>Subject</label><select id="a_subject">${state.subjects.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join("")}</select></div><div class="field"><label>Class</label><select id="a_class">${state.classes.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join("")}</select></div><div class="field"><label>Section</label><select id="a_section">${state.sections.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join("")}</select></div><button class="primary" onclick="saveAssignment()">Save Assignment</button></div></div>`}
+async function saveAssignment(){const r=await state.sb.from("teacher_subjects").insert({teacher_id:$("a_teacher").value,subject_id:$("a_subject").value,class_id:$("a_class").value,section_id:$("a_section").value,academic_year:"2026-27",active:true});if(r.error){toast(r.error.message,false);return}closeModal();assignments()}
+
+init();
+</script>
+</body>
+</html>
