@@ -1,0 +1,64 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>JNV Result Automation Online</title><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><style>body{margin:0;font-family:Arial;background:#f4f7f5;color:#18231c}.login{min-height:100vh;display:grid;place-items:center;background:linear-gradient(150deg,#10261a,#23482f);padding:20px}.box{background:#fff;width:min(420px,100%);padding:30px;border-radius:25px}.logo{width:100px;height:100px;border-radius:50%;background:#edf3ee;display:grid;place-items:center;margin:auto;font-size:32px;font-weight:bold;color:#21452d}h1{text-align:center}input,select,button{font:inherit}input,select{width:100%;padding:13px;margin:7px 0;border:1px solid #d7e0da;border-radius:11px;box-sizing:border-box}.primary{width:100%;padding:13px;border:0;border-radius:11px;background:#21452d;color:#fff;font-weight:bold}.msg{color:#b42318;margin-top:10px}.app{display:none}.side{position:fixed;left:0;top:0;bottom:0;width:220px;background:#163522;color:#fff;padding:20px}.side button{display:block;width:100%;padding:12px;margin:5px 0;background:transparent;color:white;border:0;text-align:left;border-radius:9px}.side button:hover{background:#2c5940}.main{margin-left:220px;padding:25px}.page{display:none}.page.active{display:block}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.card{background:white;padding:18px;border:1px solid #dce4df;border-radius:15px}.kpi{font-size:28px;font-weight:bold}.toolbar{display:flex;gap:8px;flex-wrap:wrap;background:#fff;padding:14px;border-radius:15px;margin-bottom:14px}.toolbar input,.toolbar select{width:auto;margin:0}.btn{background:#21452d;color:white;border:0;padding:10px 14px;border-radius:9px}.wrap{overflow:auto;background:#fff;border-radius:15px}table{width:100%;border-collapse:collapse;min-width:650px}th,td{padding:11px;border-bottom:1px solid #eee;text-align:left}th{background:#f2f6f3}.pill{background:#fff;padding:8px 12px;border-radius:20px}@media(max-width:700px){.side{width:60px;padding:10px 5px}.side h3{font-size:0}.side h3:after{content:'JNV';font-size:16px}.side button{font-size:0;text-align:center}.side button:before{content:'•';font-size:20px}.main{margin-left:60px;padding:14px}.cards{grid-template-columns:repeat(2,1fr)}}@media(max-width:450px){.cards{grid-template-columns:1fr}}</style></head><body>
+<section id="login" class="login"><div class="box"><div class="logo">JNV</div><h1>JNV Result Automation</h1><p style="text-align:center;color:#68736c">Online Multi-User System<br><b>Academic Year 2026–27</b></p><input id="email" type="email" placeholder="Email address"><input id="password" type="password" placeholder="Password"><button class="primary" onclick="login()">Sign in</button><div id="msg" class="msg"></div><p style="font-size:13px;color:#68736c">Connected to your Supabase project. No demo password is stored in this app.</p></div></section>
+<section id="app" class="app"><aside class="side"><h3>JNV Result Automation</h3><button onclick="show('dashboard')">Dashboard</button><button onclick="show('students')">Students</button><button onclick="show('exams')">Examinations</button><button onclick="show('marks')">Marks Entry</button><button onclick="show('results')">Results</button><button onclick="logout()">Logout</button></aside><main class="main"><div style="display:flex;justify-content:space-between;align-items:center"><div><h2 id="title">Dashboard</h2><p>PM SHRI Jawahar Navodaya Vidyalaya, Wargal, Siddipet</p></div><span id="role" class="pill">—</span></div>
+<div id="dashboard" class="page active"><div class="cards"><div class="card">Students<div id="ks" class="kpi">—</div></div><div class="card">Examinations<div id="ke" class="kpi">—</div></div><div class="card">Marks<div id="km" class="kpi">—</div></div><div class="card">Role<div id="kr" class="kpi" style="font-size:18px">—</div></div></div><div class="card" style="margin-top:14px">Your online database connection is active. The next deployment stage is to add the full Admin/Teacher data-entry and approval workflow.</div></div>
+<div id="students" class="page"><div class="toolbar"><input id="sq" placeholder="Search name/admission" oninput="students()"><button class="btn" onclick="students()">Refresh</button></div><div class="wrap"><table><thead><tr><th>Admission</th><th>Name</th><th>Class ID</th><th>Section ID</th><th>Roll</th><th>House</th></tr></thead><tbody id="sr"></tbody></table></div></div>
+<div id="exams" class="page"><button class="btn" onclick="exams()">Refresh</button><div class="wrap" style="margin-top:14px"><table><thead><tr><th>Exam</th><th>Class</th><th>Section</th><th>Subject</th><th>Max</th><th>Status</th></tr></thead><tbody id="er"></tbody></table></div></div>
+<div id="marks" class="page"><div class="toolbar"><select id="es" onchange="marks()"><option value="">Select examination</option></select></div><div class="wrap"><table><thead><tr><th>Roll</th><th>Admission</th><th>Name</th><th>Marks</th><th>Status</th></tr></thead><tbody id="mr"></tbody></table></div></div>
+<div id="results" class="page"><div class="toolbar"><select id="rs" onchange="results()"><option value="">Select examination</option></select></div><div class="wrap"><table><thead><tr><th>Roll</th><th>Name</th><th>Marks</th><th>%</th><th>Grade</th><th>Result</th></tr></thead><tbody id="rr"></tbody></table></div></div>
+</main></section>
+<script>
+const SUPABASE_URL='https://mnilsvgjuwnniquukedk.supabase.co';
+const SUPABASE_KEY='sb_publishable_7chu45G-OQ6LfdEd4rL-qw_V1VNNbXi';
+window.jnvDb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+let examsData=[];
+async function login(){
+ if(!window.jnvDb){document.getElementById('msg').textContent='Supabase client failed to initialize. Please refresh the page.';return}
+ const msg=document.getElementById('msg'),btn=document.querySelector('.primary');
+ msg.textContent='Signing in…'; btn.disabled=true; btn.style.opacity='.7';
+ try{
+   const email=document.getElementById('email').value.trim(), password=document.getElementById('password').value;
+   if(!email||!password) throw new Error('Please enter your email address and password.');
+   const {data:authData,error:authError}=await window.jnvDb.auth.signInWithPassword({email,password});
+   if(authError) throw authError;
+   if(!authData || !authData.user) throw new Error('Authentication did not return a user.');
+   await start(authData.user);
+ }catch(e){msg.textContent='Sign-in error: '+(e?.message||String(e));console.error(e)}
+ finally{btn.disabled=false;btn.style.opacity='1'}
+}
+async function start(user){
+ try{
+   if(!user?.id) throw new Error('No authenticated user was returned by Supabase.');
+   const {data:p,error}=await window.jnvDb.from('profiles').select('*').eq('id',user.id).maybeSingle();
+   if(error) throw new Error('Profile access failed: '+error.message);
+   if(!p) throw new Error('No profile record exists for this user. Verify that the profiles record uses the same Auth user ID.');
+   if(p.active===false) throw new Error('Account is inactive.');
+   document.getElementById('login').style.display='none';
+   document.getElementById('app').style.display='block';
+   document.getElementById('role').textContent=p.role||'user';
+   document.getElementById('kr').textContent=p.role||'user';
+   await dashboard();
+   await exams();
+ }catch(e){
+   document.getElementById('msg').textContent='Sign-in succeeded, but dashboard setup failed: '+(e?.message||String(e));
+   console.error('JNV start error:',e);
+   try{await window.jnvDb.auth.signOut()}catch(_){}
+ }
+}
+async function dashboard(){let a=await window.jnvDb.from('students').select('id',{count:'exact',head:true});let b=await window.jnvDb.from('examinations').select('id',{count:'exact',head:true});let c=await window.jnvDb.from('marks').select('id',{count:'exact',head:true});document.getElementById('ks').textContent=a.count??0;document.getElementById('ke').textContent=b.count??0;document.getElementById('km').textContent=c.count??0}
+function show(id){document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));document.getElementById(id).classList.add('active');document.getElementById('title').textContent=id[0].toUpperCase()+id.slice(1);if(id==='students')students();if(id==='exams')exams();if(id==='marks')exams();if(id==='results')exams()}
+async function students(){let q=document.getElementById('sq').value.trim();let query=window.jnvDb.from('students').select('admission_no,full_name,class_id,section_id,roll_no,house').eq('active',true).order('full_name');if(q)query=query.or('admission_no.ilike.%'+q+'%,full_name.ilike.%'+q+'%');let {data,error}=await query.limit(300);document.getElementById('sr').innerHTML=error?'<tr><td colspan="6">Unable to load students.</td></tr>':(data||[]).map(s=>'<tr><td>'+e(s.admission_no)+'</td><td>'+e(s.full_name)+'</td><td>'+e(s.class_id)+'</td><td>'+e(s.section_id)+'</td><td>'+e(s.roll_no)+'</td><td>'+e(s.house)+'</td></tr>').join('')||'<tr><td colspan="6">No students found.</td></tr>'}
+async function exams(){let {data,error}=await window.jnvDb.from('examinations').select('*').order('created_at',{ascending:false});examsData=data||[];document.getElementById('er').innerHTML=error?'<tr><td colspan="6">Unable to load examinations.</td></tr>':examsData.map(x=>'<tr><td>'+e(x.name)+'</td><td>'+e(x.class_id)+'</td><td>'+e(x.section_id)+'</td><td>'+e(x.subject_id)+'</td><td>'+x.maximum_marks+'</td><td>'+e(x.status)+'</td></tr>').join('')||'<tr><td colspan="6">No examinations found.</td></tr>';let o='<option value="">Select examination</option>'+examsData.map(x=>'<option value="'+x.id+'">'+e(x.name)+' • '+e(x.academic_year)+'</option>').join('');document.getElementById('es').innerHTML=o;document.getElementById('rs').innerHTML=o}
+async function marks(){let id=document.getElementById('es').value;if(!id)return;let x=examsData.find(a=>a.id===id);let {data:s}=await window.jnvDb.from('students').select('id,admission_no,full_name,roll_no').eq('class_id',x.class_id).eq('section_id',x.section_id).eq('active',true).order('roll_no');let {data:m}=await window.jnvDb.from('marks').select('student_id,marks,status').eq('examination_id',id);let map=Object.fromEntries((m||[]).map(a=>[a.student_id,a]));document.getElementById('mr').innerHTML=(s||[]).map(a=>{let z=map[a.id]||{};return '<tr><td>'+e(a.roll_no)+'</td><td>'+e(a.admission_no)+'</td><td>'+e(a.full_name)+'</td><td>'+(z.marks??'—')+'</td><td>'+e(z.status||'not entered')+'</td></tr>'}).join('')||'<tr><td colspan="5">No students found.</td></tr>'}
+async function results(){let id=document.getElementById('rs').value;if(!id)return;let x=examsData.find(a=>a.id===id);let {data:s}=await window.jnvDb.from('students').select('id,full_name,roll_no').eq('class_id',x.class_id).eq('section_id',x.section_id).eq('active',true).order('roll_no');let {data:m}=await window.jnvDb.from('marks').select('student_id,marks').eq('examination_id',id);let map=Object.fromEntries((m||[]).map(a=>[a.student_id,a.marks]));let a=(s||[]).map(z=>{let v=map[z.id],p=v==null?null:v/x.maximum_marks*100;return {z,v,p,g:p==null?'—':grade(p),r:v==null?'PENDING':v>=x.pass_marks?'PASS':'FAIL'}}).sort((a,b)=>(b.v??-1)-(a.v??-1));document.getElementById('rr').innerHTML=a.map(z=>'<tr><td>'+e(z.z.roll_no)+'</td><td>'+e(z.z.full_name)+'</td><td>'+(z.v??'—')+'</td><td>'+(z.p==null?'—':z.p.toFixed(1)+'%')+'</td><td>'+z.g+'</td><td>'+z.r+'</td></tr>').join('')}
+function grade(p){return p>=90?'A1':p>=80?'A2':p>=70?'B1':p>=60?'B2':p>=50?'C1':p>=40?'C2':p>=33?'D':'E'}function e(x){return String(x??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}async function logout(){await window.jnvDb.auth.signOut();location.reload()}window.jnvDb.auth.getSession().then(({data,error})=>{
+  if(error){console.error('Session restore error:',error);return}
+  if(data.session?.user) start(data.session.user);
+});
+window.jnvDb.auth.onAuthStateChange((event,session)=>{
+  if(event==="SIGNED_OUT"){
+    document.getElementById('login').style.display='grid';
+    document.getElementById('app').style.display='none';
+  }
+});
+</script></body></html>
