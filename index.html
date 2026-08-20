@@ -28,6 +28,7 @@
 @media(max-width:560px){.analysis-kpis{grid-template-columns:1fr 1fr}.analysis-grid{grid-template-columns:1fr}.result-toolbar{display:grid;grid-template-columns:1fr}.result-toolbar .field{min-width:0}.result-toolbar button{width:100%}}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 </head>
 <body><div id="root"></div><script>
 const CONFIG={SUPABASE_URL:"https://mnilsvgjuwnniquukedk.supabase.co",SUPABASE_ANON_KEY:"sb_publishable_7chu45G-OQ6LfdEd4rL-qw_V1VNNbXi"};
@@ -383,7 +384,7 @@ async function buildResults(){
    <div class="card"><div class="section-title"><h3>Top Performers</h3></div><div class="table-wrap"><table class="table"><thead><tr><th>Rank</th><th>Roll</th><th>Name</th><th>%</th><th>Grade</th></tr></thead><tbody>${top.length?top.map(r=>`<tr><td>${r.rank}</td><td>${esc(r.roll_no)}</td><td>${esc(r.full_name)}</td><td>${resultPct(r.pct)}%</td><td>${r.grade}</td></tr>`).join(""):'<tr><td colspan="5" class="empty">No completed results.</td></tr>'}</tbody></table></div></div>
    <div class="card"><div class="section-title"><h3>Needs Improvement</h3></div><div class="table-wrap"><table class="table"><thead><tr><th>Roll</th><th>Name</th><th>%</th><th>Status</th></tr></thead><tbody>${weak.length?weak.map(r=>`<tr><td>${esc(r.roll_no)}</td><td>${esc(r.full_name)}</td><td>${resultPct(r.pct)}%</td><td><span class="badge danger">${r.status}</span></td></tr>`).join(""):'<tr><td colspan="4" class="empty">No students in this category.</td></tr>'}</tbody></table></div></div>
   </div>
-  <div class="section-title"><h3>Student-wise Consolidated Result</h3><div class="actions"><button class="primary" onclick="exportStudentReportsZip()">⇩ Report PDFs</button></div></div>
+  <div class="section-title"><h3>Student-wise Consolidated Result</h3><div class="actions"><button class="ghost" onclick="reportSettingsModal()">⚙ Report Card Settings</button><button class="primary" onclick="exportStudentReportsZip()">⇩ Generate All Report Cards</button></div></div>
   <div class="table-wrap"><table class="table"><thead><tr><th>Rank</th><th>Roll</th><th>Admission</th><th>Name</th><th>Subjects</th><th>Total</th><th>%</th><th>Grade</th><th>Status</th><th>Report</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${r.rank}</td><td>${esc(r.roll_no)}</td><td>${esc(r.admission_no)}</td><td><b>${esc(r.full_name)}</b></td><td>${r.entered}/${r.subjectCount}</td><td>${resultPct(r.total)} / ${resultPct(r.max)}</td><td>${resultPct(r.pct)}%</td><td>${r.grade}</td><td><span class="badge ${r.status==="PASS"?"":"danger"}">${r.status}</span></td><td><button class="secondary smallbtn" onclick="pdfReport('${r.id}','${exId}')">PDF</button></td></tr>`).join("")||'<tr><td colspan="10" class="empty">No students found.</td></tr>'}</tbody></table></div>`;
 }
 function exportResultsExcel(){
@@ -395,13 +396,60 @@ function exportResultsExcel(){
  const summary=[{Metric:"Examination",Value:ex.name||""},{Metric:"Academic Year",Value:ex.academic_year||YEAR},{Metric:"Maximum Marks / Subject",Value:Number(ex.maximum_marks)||100},{Metric:"Pass Marks / Subject",Value:Number(ex.pass_marks)||33},{Metric:"Students",Value:rows.length},{Metric:"Appeared",Value:rows.filter(r=>r.entered>0).length},{Metric:"Passed",Value:rows.filter(r=>r.status==="PASS").length},{Metric:"Failed",Value:rows.filter(r=>r.status==="FAIL").length}];XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(summary),"Summary");XLSX.writeFile(wb,`JNV_${(ex.name||"Result").replace(/[^a-z0-9]+/gi,"_")}_Result.xlsx`);toast("Excel result downloaded")
 }
 function exportResultsCSV(){const rows=state.resultRows||[];if(!rows.length){toast("Build the result first",false);return}const csv=["Rank,Roll,Admission,Name,Class,Section,Total,Maximum,Percentage,Grade,Status",...rows.map(r=>[r.rank,r.roll_no,r.admission_no,`"${String(r.full_name||"").replaceAll('"','""')}"`,className(r.class_id),sectionName(r.section_id),r.total,r.max,r.pct.toFixed(2),r.grade,r.status].join(","))].join("\n");const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download=`JNV_${YEAR}_Consolidated_Result.csv`;a.click();toast("CSV downloaded")}
-async function pdfReport(studentId,examId){
- const s=state.students.find(x=>x.id===studentId);const ex=state.exams.find(x=>x.id===examId)||{};if(!s||!window.jspdf){toast("PDF library is not ready",false);return}
- const r=await state.sb.from("marks").select("marks,subject_id,status,attendance_status").eq("examination_id",examId).eq("student_id",studentId);if(r.error){toast(r.error.message,false);return}
- const marks=r.data||[],max=Number(ex.maximum_marks)||100,total=marks.reduce((a,m)=>a+(Number(m.marks)||0),0),possible=marks.length*max,pct=possible?total/possible*100:0,row=state.resultRows.find(x=>x.id===studentId)||{},pass=Number(ex.pass_marks??33)||33;
- const {jsPDF}=window.jspdf,d=new jsPDF();d.setFontSize(16);d.text(SCHOOL,105,18,{align:"center"});d.setFontSize(13);d.text("STUDENT REPORT CARD",105,27,{align:"center"});d.setFontSize(10);d.text(`Academic Year: ${ex.academic_year||YEAR}`,105,35,{align:"center"});d.line(15,40,195,40);d.text(`Examination: ${ex.name||""}`,20,50);d.text(`Student: ${s.full_name||""}`,20,58);d.text(`Admission No: ${s.admission_no||""}`,20,66);d.text(`Roll No: ${s.roll_no||""}`,20,74);d.text(`Class: ${className(s.class_id)}   Section: ${sectionName(s.section_id)}`,20,82);let y=94;d.setFontSize(9);d.text("Subject",20,y);d.text("Marks",120,y);d.text("Max",145,y);d.text("Status",165,y);y+=6;d.line(18,y-3,192,y-3);for(const m of marks){d.text(String(subjectName(m.subject_id)).slice(0,40),20,y);d.text(String(m.attendance_status==="Absent"?"AB":m.marks??0),120,y);d.text(String(max),145,y);d.text(String(m.status||""),165,y);y+=6;if(y>255){d.addPage();y=20}}y+=8;d.text(`Total: ${total.toFixed(2)} / ${possible.toFixed(2)}`,20,y);y+=7;d.text(`Percentage: ${pct.toFixed(2)}%`,20,y);y+=7;d.text(`Grade: ${resultGrade(pct)}`,20,y);y+=7;d.text(`Result: ${row.status||((pct>=pass/max*100)?"PASS":"FAIL")}`,20,y);y+=7;d.text(`Rank: ${row.rank||"—"}`,20,y);d.setFontSize(8);d.text("Generated by Smart School AI",20,285);d.save(`${String(s.roll_no||"student")}_${String(s.full_name||"Student").replace(/\s+/g,"_")}_Report.pdf`)
+function reportSettingsModal(){
+  const c=reportConfig;
+  $("modal").innerHTML=`<div class="modal"><div class="modal-box"><div class="modal-head"><h3>Report Card Settings</h3><button class="close" onclick="closeModal()">×</button></div><div class="form-grid"><div class="field full"><label>School Name</label><input id="rc_school" value="${esc(c.school)}"></div><div class="field full"><label>School Address</label><input id="rc_address" value="${esc(c.address)}"></div><div class="field"><label>Principal Name</label><input id="rc_principal" value="${esc(c.principal)}"></div><div class="field"><label>Class Teacher Name</label><input id="rc_teacher" value="${esc(c.classTeacher)}"></div><div class="field full"><label>School Logo URL (optional)</label><input id="rc_logo" value="${esc(c.logoUrl)}" placeholder="https://.../logo.png"><div class="hint">Leave blank to use the built-in JNV emblem.</div></div></div><button class="primary full" onclick="saveReportSettings()">Save Report Card Settings</button></div></div>`;
 }
-async function exportStudentReportsZip(){toast("Individual PDFs are available from each student's Report button.");}
+function saveReportSettings(){
+  reportConfig={school:$('rc_school').value.trim()||SCHOOL,address:$('rc_address').value.trim(),principal:$('rc_principal').value.trim()||'Principal',classTeacher:$('rc_teacher').value.trim()||'Class Teacher',logoUrl:$('rc_logo').value.trim()};
+  localStorage.setItem('smart_school_report_config',JSON.stringify(reportConfig));closeModal();toast('Report card settings saved');
+}
+async function getAttendanceSummary(studentId){
+  const r=await state.sb.from('attendance').select('status').eq('student_id',studentId);
+  if(r.error)return {present:0,absent:0,total:0};
+  const a=r.data||[],present=a.filter(x=>String(x.status||'').toLowerCase()!=='absent').length;
+  return {present,absent:a.length-present,total:a.length};
+}
+function pdfHeader(d,school,address,logoData){
+  if(logoData){try{d.addImage(logoData,'PNG',16,10,22,22);}catch(e){}}
+  else{d.setFillColor(235,244,239);d.circle(27,21,11,'F');d.setTextColor(18,63,41);d.setFontSize(11);d.setFont(undefined,'bold');d.text('JNV',27,24,{align:'center'});d.setTextColor(0,0,0);}
+  d.setFontSize(15);d.setFont(undefined,'bold');d.text(school,105,16,{align:'center'});d.setFontSize(9);d.setFont(undefined,'normal');d.text(address||'',105,23,{align:'center'});d.setFontSize(13);d.setFont(undefined,'bold');d.text('SCHOLASTIC REPORT CARD',105,32,{align:'center'});d.setFontSize(9);d.setFont(undefined,'normal');d.text(`Academic Year: ${YEAR}`,105,38,{align:'center'});d.line(14,43,196,43);
+}
+async function fetchLogoData(url){
+  if(!url)return null;
+  try{const r=await fetch(url);if(!r.ok)return null;const b=await r.blob();return await new Promise(resolve=>{const fr=new FileReader();fr.onload=()=>resolve(fr.result);fr.onerror=()=>resolve(null);fr.readAsDataURL(b);});}catch(e){return null}
+}
+async function buildReportPdf(studentId,examId){
+  const s=state.students.find(x=>x.id===studentId),ex=state.exams.find(x=>x.id===examId)||{};
+  if(!s)throw new Error('Student not found');
+  const mr=await state.sb.from('marks').select('marks,subject_id,status,attendance_status').eq('examination_id',examId).eq('student_id',studentId);
+  if(mr.error)throw mr.error;
+  const marks=mr.data||[],max=Number(ex.maximum_marks)||100,passMarks=Number(ex.pass_marks??33)||33;
+  const subjectRows=state.subjects.map(sub=>{const m=marks.find(x=>x.subject_id===sub.id);const raw=m&&m.attendance_status==='Absent'?null:(m&&m.marks!=null?Number(m.marks):null);const pct=raw==null?0:raw/max*100;return{id:sub.id,name:sub.name,marks:raw,max,pct,grade:resultGrade(pct),status:m?.attendance_status==='Absent'?'AB':(raw==null?'NA':pct>=(passMarks/max*100)?'PASS':'FAIL')};});
+  const total=subjectRows.reduce((a,x)=>a+(Number(x.marks)||0),0),possible=subjectRows.length*max,pct=possible?total/possible*100:0,row=state.resultRows.find(x=>x.id===studentId)||{};
+  const overallStatus=row.status||((subjectRows.length&&subjectRows.every(x=>x.status==='PASS'))?'PASS':'FAIL');
+  const att=await getAttendanceSummary(studentId),logo=await fetchLogoData(reportConfig.logoUrl),{jsPDF}=window.jspdf,d=new jsPDF({unit:'mm',format:'a4'});
+  pdfHeader(d,reportConfig.school,reportConfig.address,logo);
+  d.setFontSize(9);d.setFont(undefined,'bold');d.text('STUDENT DETAILS',16,52);d.setFont(undefined,'normal');d.text(`Name: ${s.full_name||''}`,16,59);d.text(`Admission No: ${s.admission_no||''}`,16,66);d.text(`Roll No: ${s.roll_no||''}`,16,73);d.text(`Class: ${className(s.class_id)}   Section: ${sectionName(s.section_id)}`,16,80);d.text(`Examination: ${ex.name||''}`,110,59);d.text(`Exam Date: ${ex.exam_date||''}`,110,66);d.text(`House: ${s.house||''}`,110,73);d.text(`Gender: ${s.gender||''}`,110,80);
+  d.setFont(undefined,'bold');d.text('SCHOLASTIC PERFORMANCE',16,90);let y=97;const cols=[16,92,116,138,157,178];d.setFillColor(18,63,41);d.rect(14,y-5,182,8,'F');d.setTextColor(255,255,255);d.setFontSize(8);['Subject','Marks','Max','%','Grade','Result'].forEach((h,i)=>d.text(h,cols[i],y,{align:i===0?'left':'center'}));d.setTextColor(0,0,0);y+=9;
+  subjectRows.forEach((x,i)=>{if(i%2===0){d.setFillColor(246,249,247);d.rect(14,y-5,182,8,'F')}d.text(String(x.name).slice(0,34),cols[0],y);d.text(x.marks===null?'AB':x.marks==null?'—':String(x.marks),cols[1],y,{align:'center'});d.text(String(max),cols[2],y,{align:'center'});d.text(x.marks==null?'—':x.pct.toFixed(1),cols[3],y,{align:'center'});d.text(x.marks==null?'—':x.grade,cols[4],y,{align:'center'});d.text(x.status,cols[5],y,{align:'center'});y+=8;if(y>245){d.addPage();pdfHeader(d,reportConfig.school,reportConfig.address,logo);y=55;}});
+  y+=5;d.setFontSize(9);d.setFont(undefined,'bold');d.text('OVERALL PERFORMANCE',16,y);y+=7;d.setFont(undefined,'normal');d.text(`Total Marks: ${total.toFixed(2)} / ${possible.toFixed(2)}`,16,y);d.text(`Percentage: ${pct.toFixed(2)}%`,80,y);d.text(`Grade: ${resultGrade(pct)}`,135,y);y+=7;d.text(`Result: ${overallStatus}`,16,y);d.text(`Class Rank: ${row.rank||'—'}`,80,y);d.text(`Pass Marks: ${passMarks} / ${max}`,135,y);y+=12;
+  d.setFont(undefined,'bold');d.text('ATTENDANCE',16,y);y+=7;d.setFont(undefined,'normal');d.text(`Present: ${att.present}`,16,y);d.text(`Absent: ${att.absent}`,65,y);d.text(`Total Days Recorded: ${att.total}`,110,y);d.text(`Attendance %: ${att.total?((att.present/att.total)*100).toFixed(1):'0.0'}%`,155,y);y+=15;
+  d.setFont(undefined,'bold');d.text('REMARKS',16,y);d.setFont(undefined,'normal');d.rect(14,y+4,182,22);d.text(overallStatus==='PASS'?'Satisfactory academic performance.':'Needs academic improvement and remedial support.',18,y+12);
+  y=270;d.line(20,y,70,y);d.line(130,y,180,y);d.setFontSize(8);d.text(reportConfig.classTeacher,45,y+6,{align:'center'});d.text(reportConfig.principal,155,y+6,{align:'center'});d.text('Class Teacher',45,y+11,{align:'center'});d.text('Principal',155,y+11,{align:'center'});d.setFontSize(7);d.text('Generated by Smart School AI',105,289,{align:'center'});
+  return d.output('blob');
+}
+async function pdfReport(studentId,examId){
+  if(!window.jspdf){toast('PDF library is not ready',false);return}
+  try{const blob=await buildReportPdf(studentId,examId),s=state.students.find(x=>x.id===studentId)||{},a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`${String(s.roll_no||'student')}_${String(s.full_name||'Report').replace(/[^a-z0-9]+/gi,'_')}_Report.pdf`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1500);toast('Report card generated')}catch(e){console.error(e);toast('Report generation failed: '+(e.message||e),false)}
+}
+async function exportStudentReportsZip(){
+  if(!window.JSZip){toast('ZIP library is still loading. Try again.',false);return}
+  const exId=$('r_exam')?.value;if(!exId){toast('Select an examination first',false);return}
+  const rows=state.resultRows||[];if(!rows.length){toast('Build the result first',false);return}
+  const btn=[...document.querySelectorAll('button')].find(x=>x.textContent.includes('Generate All Report Cards'));if(btn){btn.disabled=true;btn.textContent='Generating…'}
+  try{const zip=new JSZip();for(let i=0;i<rows.length;i++){const r=rows[i],blob=await buildReportPdf(r.id,exId);zip.file(`${String(r.roll_no||i+1).padStart(3,'0')}_${String(r.full_name||'Student').replace(/[^a-z0-9]+/gi,'_')}_Report.pdf`,blob);if(btn)btn.textContent=`Generating ${i+1}/${rows.length}…`}const out=await zip.generateAsync({type:'blob'}),a=document.createElement('a');a.href=URL.createObjectURL(out);a.download=`JNV_${YEAR}_Report_Cards_${String(state.exams.find(x=>x.id===exId)?.name||'Exam').replace(/[^a-z0-9]+/gi,'_')}.zip`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),3000);toast(`${rows.length} report cards generated`)}catch(e){console.error(e);toast('Bulk report generation failed: '+(e.message||e),false)}finally{if(btn){btn.disabled=false;btn.textContent='⇩ Generate All Report Cards'}}
+}
 
 init();
 </script></body></html>
