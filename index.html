@@ -8,6 +8,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <style>
 :root{--g:#123f29;--g2:#245d3e;--bg:#f4f7f5;--card:#fff;--txt:#18231d;--muted:#68756e;--line:#dce5df;--danger:#b3261e;--warn:#9a6500}
 *{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--txt)}
@@ -187,7 +188,7 @@ function studentForm(id){
  <button class="primary full" onclick="saveStudent('${id||""}')">Save Student</button>`)
 }
 async function saveStudent(id){
- const o={admission_no:$("ad").value.trim(),roll_no:$("ro").value.trim(),full_name:$("nm").value.trim(),gender:$("ge").value,class_id:$("cl").value,section_id:$("se").value,house:$("ho").value,father_name:$("fa").value,mother_name:$("mo").value,parent_phone:$("ph").value,address:$("addr").value,active:true};
+ const o={admission_no:$("ad").value.trim(),roll_no:$("ro").value.trim(),full_name:$("nm").value.trim(),gender:$("ge").value,class_id:$("cl").value,section_id:$("se").value,house:$("ho").value,apar_id:$("apar").value.trim(),date_of_birth:$("dob").value||null,father_name:$("fa").value,mother_name:$("mo").value,parent_phone:$("ph").value,address:$("addr").value,active:true};
  const r=id?await S.sb.from("students").update(o).eq("id",id):await S.sb.from("students").insert(o);
  if(r.error)return toast(r.error.message,false);closeModal();toast("Student saved");students();
 }
