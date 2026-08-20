@@ -56,40 +56,19 @@ button,input,select,textarea{font:inherit}button{cursor:pointer}.hidden{display:
 
 .branding-preview{display:block;width:100px;height:80px;object-fit:contain;border:1px solid var(--line);border-radius:8px;margin-top:8px;background:#fff}.signature-preview{display:block;max-width:220px;height:60px;object-fit:contain;border:1px solid var(--line);border-radius:8px;margin-top:8px;background:#fff}.report-logo img{width:100%;height:100%;object-fit:contain}.vp-sign{width:250px;margin:35px auto 0;text-align:center}.vp-sign-img{height:55px;display:flex;align-items:flex-end;justify-content:center}.vp-sign-img img{max-width:190px;max-height:55px;object-fit:contain}.vp-sign-line{border-top:1px solid #555;padding-top:5px;font-size:11px}.
 
-.report-student-photo{
-  position:absolute;
-  right:118px;
-  top:18px;
-  width:78px;
-  height:92px;
-  border:1px solid #888;
-  background:#fff;
-  display:grid;
-  place-items:center;
-  overflow:hidden;
-  font-size:10px;
-  color:#777;
-  text-align:center;
-}
-.report-student-photo img{
-  width:100%;
-  height:100%;
-  object-fit:cover;
-}
-.vp-sign{
-  width:260px;
-  margin:34px 0 0 auto;
-  text-align:center;
-}
+
+.report-student-photo{width:70px;height:90px;border:1px solid #777;display:grid;place-items:center;font-size:10px;text-align:center;overflow:hidden;float:right;margin:-2px 0 0 12px;background:#fff}.report-student-photo img{width:100%;height:100%;object-fit:cover}.student-info-wrap{display:grid;grid-template-columns:1fr 85px;gap:12px;border-top:1px solid #333;border-bottom:1px solid #333;padding:8px 0;margin:10px 0}.student-info-wrap .student-info{border:0;padding:0;margin:0}.sign{display:grid;grid-template-columns:1fr 1fr 1fr;gap:35px;margin-top:42px;text-align:center;align-items:end}.sign-box{min-height:65px;display:flex;flex-direction:column;justify-content:flex-end}.sign-img{height:42px;display:flex;align-items:flex-end;justify-content:center}.sign-img img{max-width:150px;max-height:42px;object-fit:contain}.sign-line{border-top:1px solid #555;padding-top:5px;font-size:11px}.vp-sign{display:none!important}
+@media(max-width:560px){.sign{grid-template-columns:1fr;gap:22px}.student-info-wrap{grid-template-columns:1fr 70px}.report-student-photo{width:60px;height:75px}}
 </style>
 </head>
 <body><div id="root"></div>
 <script>
+const SCHOOL_NAME_DYNAMIC = () => localStorage.getItem("jnv_school_name") || "PM SHRI Jawahar Navodaya Vidyalaya, Wargal, Siddipet";
 const CONFIG={
   SUPABASE_URL:"https://mnilsvgjuwnniquukedk.supabase.co",
   SUPABASE_ANON_KEY:"sb_publishable_7chu45G-OQ6LfdEd4rL-qw_V1VNNbXi"
 };
-const SCHOOL="PM SHRI Jawahar Navodaya Vidyalaya, Wargal, Siddipet";
+const SCHOOL="${getSchoolName()}";
 const YEAR="2026-27";
 const S={
   sb:null,user:null,profile:null,page:"dashboard",
@@ -422,18 +401,17 @@ async function showReport(){
  }).join("");
  $("reportArea").innerHTML=`<div class="report" id="printReport">
  <div class="report-header"><div class="report-logo">${getImage(MEDIA_KEYS.logoLeft)?`<img src="${getImage(MEDIA_KEYS.logoLeft)}" alt="Logo">`:"JNV<br>LOGO"}</div><div class="report-title">
- <h2>JAWAHAR NAVODAYA VIDYALAYA</h2><h3>REPORT CARD FOR CLASS ${esc(C(st.class_id))}</h3><p>ACADEMIC SESSION: ${YEAR}</p></div><div class="report-logo">${getImage(MEDIA_KEYS.logoRight)?`<img src="${getImage(MEDIA_KEYS.logoRight)}" alt="Logo">`:"LOGO"}</div></div><div class="photo-box">${getStudentPhoto(st.id)?`<img src="${getStudentPhoto(st.id)}" alt="Student Photo">`:"Photograph"}</div>
- <div class="student-info">
- <div><b>Roll No:</b> ${esc(st.roll_no)}</div><div><b>APAR ID:</b> ${esc(st.apar_id||"")}</div>
- <div><b>Student's Name:</b> ${esc(st.full_name)}</div><div><b>Section:</b> ${esc(SEC(st.section_id))}</div>
- <div><b>Name of the Mother:</b> ${esc(st.mother_name)}</div><div><b>Name of the Father:</b> ${esc(st.father_name)}</div>
- <div><b>Date of Birth:</b> ${esc(st.date_of_birth||"")}</div><div><b>House:</b> ${esc(st.house||"")}</div>
+ <h2>JAWAHAR NAVODAYA VIDYALAYA</h2><h3>REPORT CARD FOR CLASS ${esc(C(st.class_id))}</h3><p>ACADEMIC SESSION: ${YEAR}</p></div><div class="report-logo">${getImage(MEDIA_KEYS.logoRight)?`<img src="${getImage(MEDIA_KEYS.logoRight)}" alt="Logo">`:"LOGO"}</div></div>
+ <div class="student-info-wrap">
+   <div class="student-info">
+    <div><b>Roll No:</b> ${esc(st.roll_no)}</div><div><b>APAR ID:</b> ${esc(st.apar_id||"")}</div>
+    <div><b>Student's Name:</b> ${esc(st.full_name)}</div><div><b>Section:</b> ${esc(SEC(st.section_id))}</div>
+    <div><b>Name of the Mother:</b> ${esc(st.mother_name)}</div><div><b>Name of the Father:</b> ${esc(st.father_name)}</div>
+    <div><b>Date of Birth:</b> ${esc(st.date_of_birth||"")}</div><div><b>House:</b> ${esc(st.house||"")}</div>
+   </div>
+   <div class="report-student-photo">${getStudentPhoto(st.id)?`<img src="${getStudentPhoto(st.id)}" alt="Student Photo">`:'Photograph'}</div>
  </div>
- <div class="part-title">
-<div class="report-student-photo">
-  ${getStudentPhoto(st.id)?`<img src="${getStudentPhoto(st.id)}" alt="Student Photo">`:'<span>Photograph</span>'}
-</div>
-Part A: Scholastic Area</div>
+ <div class="part-title">Part A: Scholastic Area</div>
  <div class="table-wrap"><table><thead><tr><th>Subject Name</th><th>Term-1</th><th>Term-2</th><th>Total</th><th>Overall Grade</th></tr></thead><tbody>${rows||'<tr><td colspan="5">No marks found in the supported marks tables.</td></tr>'}</tbody></table></div>
  <div class="part-title">Part B: Co-Scholastic Area (Grade)</div>
  <table><thead><tr><th>Co-Scholastic Area</th><th>Annual Grade</th></tr></thead><tbody>${coRows(co)}</tbody></table>
@@ -448,7 +426,11 @@ Part A: Scholastic Area</div>
  <div class="part-title">Part G: Attendance</div>
  <table><thead><tr><th>Term</th><th>Total Working Days</th><th>Number of Days Attended</th><th>% Attendance</th></tr></thead>
  <tbody><tr><td>Term-1</td><td>—</td><td>—</td><td>—</td></tr><tr><td>Term-2</td><td>—</td><td>—</td><td>—</td></tr></tbody></table>
- <div class="sign"><div>Signature of Class Teacher</div><div>Signature of Vice Principal</div></div><div class="vp-sign"><div class="vp-sign-img">${getImage(MEDIA_KEYS.vpSignature)?`<img src="${getImage(MEDIA_KEYS.vpSignature)}" alt="Vice Principal Signature">`:""}</div><div class="vp-sign-line">Signature of Principal</div></div>
+ <div class="sign">
+   <div class="sign-box"><div class="sign-img"></div><div class="sign-line">Signature of Class Teacher</div></div>
+   <div class="sign-box"><div class="sign-img">${getImage(MEDIA_KEYS.vpSignature)?`<img src="${getImage(MEDIA_KEYS.vpSignature)}" alt="Vice Principal Signature">`:""}</div><div class="sign-line">Signature of Vice Principal</div></div>
+   <div class="sign-box"><div class="sign-img"></div><div class="sign-line">Signature of Principal</div></div>
+ </div>
  <div class="small-note" style="margin-top:20px"><b>Grading Scale for Co-scholastic Areas:</b> A — Exemplary, B — Proficient, C — Developing, D — Emerging, E — Beginner.</div>
  <div class="small-note" style="margin-top:8px"><b>Grading Scale for Discipline:</b> A — Outstanding, B — Very Good, C — Fair.</div>
  </div>
@@ -464,6 +446,42 @@ async function downloadReportPDF(){
  pdf.save("JNV_Report_Card.pdf");
 }
 init();
+</script>
+
+<script>
+function getSchoolName(){
+  return localStorage.getItem("jnv_school_name") ||
+    "${getSchoolName()}";
+}
+function openSchoolNameSettings(){
+  const old=document.getElementById("schoolNameSettings");
+  if(old) old.remove();
+  const wrap=document.createElement("div");
+  wrap.id="schoolNameSettings";
+  wrap.style.cssText="position:fixed;inset:0;background:#0008;z-index:9999;display:grid;place-items:center;padding:20px";
+  wrap.innerHTML=`<div style="background:#fff;border-radius:18px;padding:20px;width:min(520px,100%);box-shadow:0 20px 60px #0005">
+    <h3 style="margin:0 0 8px">School Name Settings</h3>
+    <div style="font-size:13px;color:#68756e;margin-bottom:12px">Change the school name displayed on the app and report cards.</div>
+    <label style="font-size:13px;font-weight:700">School Name</label>
+    <input id="schoolNameInput" style="width:100%;padding:11px;border:1px solid #dce5df;border-radius:10px;margin:7px 0 14px"
+      value="${getSchoolName().replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}">
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button onclick="document.getElementById('schoolNameSettings').remove()" class="ghost">Cancel</button>
+      <button onclick="saveSchoolName()" class="primary">Save School Name</button>
+    </div>
+  </div>`;
+  document.body.appendChild(wrap);
+}
+function saveSchoolName(){
+  const el=document.getElementById("schoolNameInput");
+  const name=(el?.value||"").trim();
+  if(!name){ alert("Please enter a school name."); return; }
+  localStorage.setItem("jnv_school_name",name);
+  document.querySelectorAll("[data-school-name]").forEach(e=>e.textContent=name);
+  document.getElementById("schoolNameSettings")?.remove();
+  alert("School name saved successfully.");
+  location.reload();
+}
 </script>
 </body>
 </html>
