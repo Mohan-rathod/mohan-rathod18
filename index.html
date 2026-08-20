@@ -164,7 +164,7 @@ async function dashboard(){
  const vals=await Promise.all(["students","classes","subjects","examinations"].map(async t=>{const r=await S.sb.from(t).select("*",{count:"exact",head:true});return r.count||0}));
  $("content").innerHTML=`<div class="grid">${[["Students",vals[0]],["Classes",vals[1]],["Subjects",vals[2]],["Examinations",vals[3]]].map(x=>`<div class="card kpi"><div class="label">${x[0]}</div><div class="num">${x[1]}</div></div>`).join("")}</div>
  <div class="section-title"><h3>JNV Result Automation</h3></div>
- <div class="notice"><b>Co-Scholastic grades are annual.</b> Enter them once for each student for ${YEAR}; they automatically appear on the student's report card.</div>`
+ <div class="notice"><b>Bulk Upload is available</b> in Students, Classes/Sections, Subjects, Teachers, Examinations, Marks, Co-Scholastic and Attendance. Individual Edit/Delete controls are also available where supported.</div><div class="notice"><b>Co-Scholastic grades are annual.</b> Enter them once for each student for ${YEAR}; they automatically appear on the student's report card.</div>`
 }
 async function students(){await lookups();renderStudents(S.students)}
 function renderStudents(arr){
@@ -193,24 +193,75 @@ async function saveStudent(id){
  if(r.error)return toast(r.error.message,false);closeModal();toast("Student saved");students();
 }
 async function classes(){
- await lookups();
- $("content").innerHTML=`<div class="section-title"><h3>Classes</h3></div>${tbl(["Class","Order","Active"],S.classes.map(x=>`<tr><td>${esc(x.name)}</td><td>${x.display_order??""}</td><td>${x.active===false?"No":"Yes"}</td></tr>`).join(""))}
- <div class="section-title"><h3>Sections</h3></div>${tbl(["Class","Section","Active"],S.sections.map(x=>`<tr><td>${C(x.class_id)}</td><td>${esc(x.name)}</td><td>${x.active===false?"No":"Yes"}</td></tr>`).join(""))}`
+  await lookups();
+  $("content").innerHTML=`<div class="section-title"><h3>Classes</h3><div class="actions">
+  ${bulkButton("classes","Class",["name","display_order","active"],[["VI",6,true]])}
+  </div></div>
+  ${tbl(["Class","Order","Active","Action"],S.classes.map(x=>`<tr><td>${esc(x.name)}</td><td>${x.display_order??""}</td><td>${x.active===false?"No":"Yes"}</td><td class="actions"><button class="secondary" onclick="editSimple('classes','${x.id}','Class')">Edit</button><button class="danger" onclick="deleteWithConfirm('classes','${x.id}','Class')">Delete</button></td></tr>`).join(""))}
+  <div class="section-title"><h3>Sections</h3><div class="actions">
+  ${bulkButton("sections","Section",["class_id","name","active"],[["CLASS_ID","A",true]])}
+  </div></div>
+  ${tbl(["Class","Section","Active","Action"],S.sections.map(x=>`<tr><td>${C(x.class_id)}</td><td>${esc(x.name)}</td><td>${x.active===false?"No":"Yes"}</td><td class="actions"><button class="secondary" onclick="editSimple('sections','${x.id}','Section')">Edit</button><button class="danger" onclick="deleteWithConfirm('sections','${x.id}','Section')">Delete</button></td></tr>`).join(""))}`;
 }
-async function subjects(){
+function editSimple(table,id,label){
+  const fields=table==="classes"?[["name","Class Name"],["display_order","Display Order","number"],["active","Active"]]:[["class_id","Class ID"],["name","Section Name"],["active","Active"]];
+  editSimpleCore(table,id,label,fields);
+}
+function editSimpleCore(table,id,label,fields){
+  const x=S[table].find(a=>a.id===id)||{};
+  modal("Edit "+label,`<div class="form-grid">${fields.map(([k,l,t])=>`<div class="field"><label>${l}</label><input id="ed_${k}" type="${t||"text"}" value="${esc(x[k])}"></div>`).join("")}</div><button class="primary full" onclick="saveSimpleEdit('${table}','${id}','${label}',${JSON.stringify(fields.map(f=>f[0]))})">Save Changes</button>`);
+}
+(){
  await lookups();$("content").innerHTML=`<div class="notice">Subjects are read directly from Supabase. Examination/report-card subject lists are dynamic; there is no six-subject limit.</div>
  <div class="section-title"><h3>Subjects</h3></div>${tbl(["Subject","ID"],S.subjects.map(x=>`<tr><td>${esc(x.name||x.subject_name)}</td><td class="mini">${esc(x.id)}</td></tr>`).join(""))}`
 }
 async function teachers(){
- await lookups();$("content").innerHTML=`<div class="section-title"><h3>Teachers</h3></div>${tbl(["Teacher","Email","Active"],S.teachers.map(x=>`<tr><td>${esc(x.full_name)}</td><td>${esc(x.email)}</td><td>${x.active===false?"No":"Yes"}</td></tr>`).join(""))}`
+  await lookups();
+  $("content").innerHTML=`<div class="section-title"><h3>Teachers</h3><div class="actions">
+  ${bulkButton("teachers","Teacher",["full_name","email","phone","employee_id","active"],[["Sample Teacher","teacher@example.com","9999999999","EMP001",true]])}
+  <button class="primary" onclick="teacherForm()">+ Add Teacher</button></div></div>
+  ${tbl(["Teacher","Email","Phone","Employee ID","Active","Action"],S.teachers.map(x=>`<tr><td>${esc(x.full_name)}</td><td>${esc(x.email)}</td><td>${esc(x.phone)}</td><td>${esc(x.employee_id)}</td><td>${x.active===false?"No":"Yes"}</td><td class="actions"><button class="secondary" onclick="teacherForm('${x.id}')">Edit</button><button class="danger" onclick="deleteWithConfirm('teachers','${x.id}','Teacher')">Delete</button></td></tr>`).join(""))}`;
 }
-async function exams(){
+function teacherForm(id){
+  const x=S.teachers.find(a=>a.id===id)||{};
+  modal(id?"Edit Teacher":"Add Teacher",`<div class="form-grid">
+  <div class="field"><label>Full Name</label><input id="tn" value="${esc(x.full_name)}"></div>
+  <div class="field"><label>Email</label><input id="te" type="email" value="${esc(x.email)}"></div>
+  <div class="field"><label>Phone</label><input id="tp" value="${esc(x.phone)}"></div>
+  <div class="field"><label>Employee ID</label><input id="tei" value="${esc(x.employee_id)}"></div>
+  </div><button class="primary full" onclick="saveTeacher('${id||""}')">Save Teacher</button>`);
+}
+async function saveTeacher(id){
+  const o={full_name:$("tn").value.trim(),email:$("te").value.trim(),phone:$("tp").value.trim(),employee_id:$("tei").value.trim(),active:true};
+  if(!o.full_name)return toast("Teacher name is required",false);
+  const r=id?await S.sb.from("teachers").update(o).eq("id",id):await S.sb.from("teachers").insert(o);
+  if(r.error)return toast(r.error.message,false);
+  closeModal();toast("Teacher saved");await go("teachers");
+}
+(){
  await lookups();$("content").innerHTML=`<div class="notice"><b>Dynamic examinations.</b> Examinations are selected from the database. The report card can display all subjects assigned to the student's class.</div>
  <div class="section-title"><h3>Examinations</h3></div>${tbl(["Examination","Date","Class","Max Marks"],S.exams.map(x=>`<tr><td>${esc(x.name||x.exam_name||x.title)}</td><td>${esc(x.exam_date)}</td><td>${C(x.class_id)||"All"}</td><td>${esc(x.max_marks||"")}</td></tr>`).join(""))}`
 }
 async function marks(){
- await lookups();
- $("content").innerHTML=`<div class="notice">Use your existing examination/marks-entry workflow here. This replacement keeps the database-driven classes, subjects and examinations available and adds the annual Co-Scholastic module and JNV-style report card.</div>`
+  await lookups();
+  $("content").innerHTML=`<div class="notice"><b>Marks Entry</b><br>Bulk upload is available using the common columns below. The app will attempt to save them to the existing <code>marks</code> table.</div>
+  <div class="toolbar">
+  <button class="secondary" onclick='downloadTemplate("Marks_Template.xlsx",["student_id","examination_id","subject_id","marks"],[["STUDENT_ID","EXAM_ID","SUBJECT_ID",40]])'>Template</button>
+  <label class="secondary" style="cursor:pointer">Bulk Upload <input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="bulkMarksUpload(this.files[0],this)"></label>
+  </div>
+  <div class="card"><b>Required columns:</b> student_id, examination_id, subject_id, marks</div>`;
+}
+async function bulkMarksUpload(file,input){
+  if(!file)return;
+  try{
+    const rows=await parseBulkFile(file);
+    const payload=rows.map(r=>cleanBulkObject(r,["student_id","examination_id","subject_id","marks","marks_obtained"])).filter(x=>x.student_id&&x.examination_id&&x.subject_id);
+    if(!payload.length)throw new Error("No valid marks rows found.");
+    for(const o of payload)o.marks=Number(o.marks??o.marks_obtained??0);
+    const r=await S.sb.from("marks").upsert(payload,{onConflict:"student_id,examination_id,subject_id"});
+    if(r.error)throw r.error;
+    toast(`${payload.length} mark(s) uploaded`);input.value="";
+  }catch(e){toast(e.message||String(e),false);input.value=""}
 }
 async function attendance(){
  $("content").innerHTML=`<div class="card"><h3>Attendance</h3><p class="mini">Attendance fields can be added to the report card when your attendance table is connected.</p></div>`
@@ -221,6 +272,111 @@ async function results(){
 async function delRow(table,id,label){
  if(!confirm("Delete "+label+"?"))return;
  const r=await S.sb.from(table).delete().eq("id",id);if(r.error)return toast(r.error.message,false);toast(label+" deleted");go(S.page);
+}
+
+
+/* =========================
+   BULK UPLOAD + CRUD HELPERS
+   ========================= */
+function downloadTemplate(filename, headers, sampleRows=[]){
+  const ws=XLSX.utils.aoa_to_sheet([headers,...sampleRows]);
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Template");
+  XLSX.writeFile(wb,filename);
+}
+function bulkButton(table,label,headers,sampleRows=[]){
+  return `<button class="secondary" onclick='downloadTemplate(${JSON.stringify(label+"_Template.xlsx")},${JSON.stringify(headers)},${JSON.stringify(sampleRows)})'>Template</button>
+  <label class="secondary" style="display:inline-block;cursor:pointer">Bulk Upload
+  <input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="bulkUpload('${table}','${label}',this.files[0],this)"></label>`;
+}
+function normalizeHeader(x){
+  return String(x??"").trim().toLowerCase().replace(/[\s\-]+/g,"_");
+}
+function parseBulkFile(file){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=e=>{
+      try{
+        const data=new Uint8Array(e.target.result);
+        const wb=XLSX.read(data,{type:"array"});
+        const ws=wb.Sheets[wb.SheetNames[0]];
+        const rows=XLSX.utils.sheet_to_json(ws,{defval:""});
+        resolve(rows);
+      }catch(err){reject(err)}
+    };
+    reader.onerror=()=>reject(reader.error||new Error("Unable to read file"));
+    reader.readAsArrayBuffer(file);
+  });
+}
+function cleanBulkObject(row,allowed){
+  const o={};
+  for(const key of Object.keys(row)){
+    const nk=normalizeHeader(key);
+    if(allowed.includes(nk)){
+      let v=row[key];
+      if(typeof v==="string")v=v.trim();
+      if(v!=="")o[nk]=v;
+    }
+  }
+  return o;
+}
+async function bulkUpload(table,label,file,input){
+  if(!file)return;
+  try{
+    const rows=await parseBulkFile(file);
+    if(!rows.length)throw new Error("No rows found in the uploaded file.");
+    if(!confirm(`Import ${rows.length} ${label} record(s) into ${table}?`)){input.value="";return}
+    const configs={
+      students:["admission_no","roll_no","full_name","gender","class_id","section_id","house","apar_id","date_of_birth","father_name","mother_name","parent_phone","address","active"],
+      subjects:["name","subject_name","code","class_id","active"],
+      teachers:["full_name","email","phone","employee_id","active"],
+      examinations:["name","exam_name","title","exam_date","class_id","max_marks","active"],
+      classes:["name","display_order","active"],
+      sections:["class_id","name","active"]
+    };
+    const allowed=configs[table]||Object.keys(rows[0]).map(normalizeHeader);
+    const payload=rows.map(r=>cleanBulkObject(r,allowed)).filter(o=>Object.keys(o).length);
+    if(!payload.length)throw new Error("No usable columns were found. Use the Template button first.");
+    // Convert common boolean text values.
+    for(const o of payload){
+      if("active" in o)o.active=!["false","no","0","inactive"].includes(String(o.active).toLowerCase());
+      if("display_order" in o && o.display_order!=="")o.display_order=Number(o.display_order);
+      if("max_marks" in o && o.max_marks!=="")o.max_marks=Number(o.max_marks);
+    }
+    const r=await S.sb.from(table).upsert(payload,{onConflict:table==="students"?"admission_no":undefined});
+    if(r.error){
+      // If the table has no suitable conflict target, retry as insert.
+      if(String(r.error.message).toLowerCase().includes("on conflict")){
+        const rr=await S.sb.from(table).insert(payload);
+        if(rr.error)throw rr.error;
+      }else throw r.error;
+    }
+    toast(`${payload.length} ${label} record(s) uploaded successfully`);
+    input.value="";
+    await go(S.page);
+  }catch(e){
+    toast(e.message||String(e),false);
+    input.value="";
+  }
+}
+async function editSimple(table,id,label,fields){
+  const x=(S[table]||[]).find(a=>a.id===id)||{};
+  const body=fields.map(([k,l,t])=>`<div class="field"><label>${l}</label><input id="ed_${k}" type="${t||"text"}" value="${esc(x[k])}"></div>`).join("");
+  modal("Edit "+label,`<div class="form-grid">${body}</div><button class="primary full" onclick="saveSimpleEdit('${table}','${id}','${label}',${JSON.stringify(fields.map(f=>f[0]))})">Save Changes</button>`);
+}
+async function saveSimpleEdit(table,id,label,keys){
+  const o={};for(const k of keys)o[k]=$("ed_"+k).value.trim();
+  if("display_order" in o)o.display_order=Number(o.display_order||0);
+  if("max_marks" in o)o.max_marks=Number(o.max_marks||0);
+  if("active" in o)o.active=!["false","no","0","inactive"].includes(String(o.active).toLowerCase());
+  const r=await S.sb.from(table).update(o).eq("id",id);
+  if(r.error)return toast(r.error.message,false);
+  closeModal();toast(label+" updated");await go(S.page);
+}
+async function deleteWithConfirm(table,id,label){
+  if(!confirm(`Delete ${label}? This may also affect related records.`))return;
+  const r=await S.sb.from(table).delete().eq("id",id);
+  if(r.error)return toast(r.error.message,false);
+  toast(label+" deleted");await go(S.page);
 }
 
 /* =========================
@@ -248,23 +404,40 @@ async function coScholastic(){
  renderCO();
 }
 function renderCO(){
- const filtered=S.students.filter(x=>!S.selectedClass||x.class_id===S.selectedClass);
- $("content").innerHTML=`<div class="toolbar">
- <div style="min-width:180px"><label class="mini">Class</label><select id="coClass" onchange="S.selectedClass=this.value;renderCO()">${S.classes.map(c=>`<option value="${c.id}" ${c.id===S.selectedClass?"selected":""}>${esc(c.name)}</option>`).join("")}</select></div>
- <div style="min-width:160px"><label class="mini">Section</label><select id="coSection" onchange="renderCO()"><option value="">All Sections</option>${S.sections.filter(x=>!S.selectedClass||x.class_id===S.selectedClass).map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join("")}</select></div>
- <input class="search" id="coSearch" placeholder="Search student" oninput="renderCO()">
- <span class="badge">${YEAR} • Annual Entry</span></div>
- <div class="notice"><b>Enter Co-Scholastic grades only once per academic year.</b><br>
- The same grades will be automatically shown on the student's report card. Grades allowed: A, B, C, D, E.</div>
- <div class="section-title"><h3>Student Co-Scholastic Records</h3></div>
- ${tbl(["Roll","Admission","Student","Section","Status","Action"],filtered.filter(x=>{const sec=$("coSection")?.value||"";const q=($("coSearch")?.value||"").toLowerCase();return(!sec||x.section_id===sec)&&(!q||(x.full_name+" "+x.admission_no+" "+x.roll_no).toLowerCase().includes(q))}).map(x=>{
- const rec=S.co.find(c=>c.student_id===x.id);
- return `<tr><td>${esc(x.roll_no)}</td><td>${esc(x.admission_no)}</td><td><b>${esc(x.full_name)}</b></td><td>${SEC(x.section_id)}</td>
- <td>${rec?'<span class="badge">Entered</span>':'<span class="badge warn">Pending</span>'}</td>
- <td><button class="primary" onclick="coForm('${x.id}')">${rec?"Edit Grades":"Enter Grades"}</button></td></tr>`
- }).join(""))}`;
+  const filtered=S.students.filter(x=>!S.selectedClass||x.class_id===S.selectedClass);
+  const coHeaders=["student_id","academic_year","work_education","art_education","health_physical_education","discipline","cca","yoga","sports","health_status"];
+  $("content").innerHTML=`<div class="toolbar">
+  <div style="min-width:180px"><label class="mini">Class</label><select id="coClass" onchange="S.selectedClass=this.value;renderCO()">${S.classes.map(c=>`<option value="${c.id}" ${c.id===S.selectedClass?"selected":""}>${esc(c.name)}</option>`).join("")}</select></div>
+  <div style="min-width:160px"><label class="mini">Section</label><select id="coSection" onchange="renderCO()"><option value="">All Sections</option>${S.sections.filter(x=>!S.selectedClass||x.class_id===S.selectedClass).map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join("")}</select></div>
+  <input class="search" id="coSearch" placeholder="Search student" oninput="renderCO()">
+  <button class="secondary" onclick='downloadTemplate("Co_Scholastic_Template.xlsx",${JSON.stringify(coHeaders)},[["STUDENT_ID","2026-27","A","A","A","A","A","A","A","A"]])'>Template</button>
+  <label class="secondary" style="cursor:pointer">Bulk Upload <input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="bulkCOUpload(this.files[0],this)"></label>
+  <span class="badge">${YEAR} • Annual Entry</span></div>
+  <div class="notice"><b>Enter Co-Scholastic grades only once per academic year.</b><br>The same grades appear automatically on the report card. Grades allowed: A, B, C, D, E.</div>
+  <div class="section-title"><h3>Student Co-Scholastic Records</h3></div>
+  ${tbl(["Roll","Admission","Student","Section","Status","Action"],filtered.filter(x=>{const sec=$("coSection")?.value||"";const q=($("coSearch")?.value||"").toLowerCase();return(!sec||x.section_id===sec)&&(!q||(x.full_name+" "+x.admission_no+" "+x.roll_no).toLowerCase().includes(q))}).map(x=>{
+    const rec=S.co.find(c=>c.student_id===x.id);
+    return `<tr><td>${esc(x.roll_no)}</td><td>${esc(x.admission_no)}</td><td><b>${esc(x.full_name)}</b></td><td>${SEC(x.section_id)}</td>
+    <td>${rec?'<span class="badge">Entered</span>':'<span class="badge warn">Pending</span>'}</td>
+    <td class="actions"><button class="primary" onclick="coForm('${x.id}')">${rec?"Edit Grades":"Enter Grades"}</button>${rec?`<button class="danger" onclick="deleteWithConfirm('co_scholastic','${rec.id}','Co-Scholastic record')">Delete</button>`:""}</td></tr>`
+  }).join(""))}`;
 }
-function coForm(studentId){
+async function bulkCOUpload(file,input){
+  if(!file)return;
+  try{
+    const rows=await parseBulkFile(file);if(!rows.length)throw new Error("No rows found.");
+    const fields=["student_id","academic_year","work_education","art_education","health_physical_education","discipline","cca","yoga","sports","health_status"];
+    const payload=rows.map(r=>cleanBulkObject(r,fields)).filter(x=>x.student_id);
+    for(const o of payload){
+      o.academic_year=o.academic_year||YEAR;
+      for(const k of fields.slice(2))if(o[k]){o[k]=String(o[k]).toUpperCase();if(!VALID_CO.includes(o[k]))throw new Error(`Invalid grade ${o[k]} in ${k}. Use A, B, C, D or E.`)}
+    }
+    if(!confirm(`Upload ${payload.length} Co-Scholastic record(s)?`))return;
+    const r=await S.sb.from("co_scholastic").upsert(payload,{onConflict:"student_id,academic_year"});
+    if(r.error)throw r.error;
+    toast(`${payload.length} Co-Scholastic record(s) uploaded`);input.value="";await loadCO();renderCO();
+  }catch(e){toast(e.message||String(e),false);input.value=""}
+}(studentId){
  const st=S.students.find(x=>x.id===studentId);const rec=S.co.find(x=>x.student_id===studentId)||{};
  const inputs=CO_FIELDS.map(([k,l])=>`<div class="field"><label>${l}</label><select id="co_${k}" class="grade-input"><option value="">Select</option>${VALID_CO.map(g=>`<option value="${g}" ${String(rec[k]||"").toUpperCase()===g?"selected":""}>${g}</option>`).join("")}</select></div>`).join("");
  modal("Annual Co-Scholastic Grades",`<div class="notice"><b>${esc(st?.full_name)}</b> · Class ${esc(C(st?.class_id))} · Section ${esc(SEC(st?.section_id))}<br>Academic Year: <b>${YEAR}</b><br><span class="mini">This record is saved once for the whole academic year.</span></div>
