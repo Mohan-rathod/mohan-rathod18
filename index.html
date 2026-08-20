@@ -46,13 +46,15 @@ button,input,select,textarea{font:inherit}button{cursor:pointer}.hidden{display:
 .mini{font-size:12px;color:var(--muted)}.success-text{color:var(--g)}.danger-text{color:var(--danger)}
 .cs-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.grade-input{text-transform:uppercase;font-weight:800;text-align:center}
 .report-header{display:grid;grid-template-columns:90px 1fr 90px;gap:15px;align-items:center}.report-logo{width:75px;height:75px;border:1px solid #aaa;display:grid;place-items:center;font-size:9px;text-align:center}
-.photo-box{width:70px;height:90px;border:1px solid #777;display:grid;place-items:center;font-size:10px;text-align:center}
+.photo-box{width:70px;height:90px;border:1px solid #777;display:grid;place-items:center;font-size:10px;text-align:center;overflow:hidden}.photo-box img{width:100%;height:100%;object-fit:cover}
 .report-title{text-align:center}.report-title h2{margin:2px;font-size:17px}.report-title h3{margin:2px;font-size:13px}.report-title p{margin:2px;font-size:11px}
 .student-info{display:grid;grid-template-columns:1fr 1fr;gap:4px 30px;border-top:1px solid #333;border-bottom:1px solid #333;padding:8px 0;margin:10px 0;font-size:11px}
 .part-title{font-weight:900;margin:12px 0 4px;font-size:12px}.small-note{font-size:9px;color:#444}
 @media(max-width:900px){.side{width:70px;padding:8px}.brand{font-size:0;text-align:center}.brand:after{content:"SS";font-size:19px}.school{display:none}.nav button{font-size:0;text-align:center}.nav button:before{content:"•";font-size:23px}.main{margin-left:70px;width:calc(100% - 70px);padding:12px}.grid{grid-template-columns:1fr 1fr}}
 @media(max-width:560px){.grid,.cs-grid{grid-template-columns:1fr}.form-grid{grid-template-columns:1fr}.wide{grid-column:auto}.top{flex-direction:column}.sign{grid-template-columns:1fr;gap:30px}.login{padding:24px}.report-header{grid-template-columns:60px 1fr 60px}.report-logo{width:55px;height:55px}.photo-box{width:55px;height:70px}.student-info{grid-template-columns:1fr}}
 @media print{.side,.top,.toolbar,.no-print{display:none!important}.main{margin:0;width:100%;padding:5px}.report{border:0;box-shadow:none;max-width:none}.report-card-print{display:block}}
+
+.branding-preview{display:block;width:100px;height:80px;object-fit:contain;border:1px solid var(--line);border-radius:8px;margin-top:8px;background:#fff}.signature-preview{display:block;max-width:220px;height:60px;object-fit:contain;border:1px solid var(--line);border-radius:8px;margin-top:8px;background:#fff}.report-logo img{width:100%;height:100%;object-fit:contain}.vp-sign{width:250px;margin:35px auto 0;text-align:center}.vp-sign-img{height:55px;display:flex;align-items:flex-end;justify-content:center}.vp-sign-img img{max-width:190px;max-height:55px;object-fit:contain}.vp-sign-line{border-top:1px solid #555;padding-top:5px;font-size:11px}.
 </style>
 </head>
 <body><div id="root"></div>
@@ -69,6 +71,15 @@ const S={
   selectedClass:"",selectedSection:""
 };
 const $=id=>document.getElementById(id);
+
+const MEDIA_KEYS={logoLeft:"jnv_logo_left",logoRight:"jnv_logo_right",vpSignature:"jnv_vp_signature"};
+function getImage(key){return localStorage.getItem(key)||""}
+function saveImage(key,file){return new Promise((resolve,reject)=>{if(!file)return resolve("");const r=new FileReader();r.onload=()=>{try{localStorage.setItem(key,r.result);resolve(r.result)}catch(e){reject(new Error("Image too large. Please use a smaller JPG/PNG."))}};r.onerror=()=>reject(new Error("Could not read image."));r.readAsDataURL(file)})}
+function studentPhotoKey(id){return "jnv_student_photo_"+id}
+function getStudentPhoto(id){return localStorage.getItem(studentPhotoKey(id))||""}
+async function saveBranding(){try{const l=$("logoLeftFile")?.files?.[0],r=$("logoRightFile")?.files?.[0],s=$("vpSigFile")?.files?.[0];if(l)await saveImage(MEDIA_KEYS.logoLeft,l);if(r)await saveImage(MEDIA_KEYS.logoRight,r);if(s)await saveImage(MEDIA_KEYS.vpSignature,s);toast("Report-card images saved");brandingForm()}catch(e){toast(e.message,false)}}
+function brandingForm(){const l=getImage(MEDIA_KEYS.logoLeft),r=getImage(MEDIA_KEYS.logoRight),s=getImage(MEDIA_KEYS.vpSignature);modal("Report Card Branding",`<div class="notice"><b>Upload report-card images.</b> These are stored in this browser, so they will appear on report cards made on this device.</div><div class="form-grid"><div class="field"><label>Top-left Logo</label><input id="logoLeftFile" type="file" accept="image/png,image/jpeg,image/webp">${l?`<img class="branding-preview" src="${l}">`:"<div class=mini>No logo uploaded</div>"}</div><div class="field"><label>Top-right Logo</label><input id="logoRightFile" type="file" accept="image/png,image/jpeg,image/webp">${r?`<img class="branding-preview" src="${r}">`:"<div class=mini>No logo uploaded</div>"}</div><div class="field wide"><label>Vice Principal Signature</label><input id="vpSigFile" type="file" accept="image/png,image/jpeg,image/webp">${s?`<img class="signature-preview" src="${s}">`:"<div class=mini>No signature uploaded</div>"}</div></div><div class="actions"><button class="primary" onclick="saveBranding()">Save Images</button><button class="ghost" onclick="localStorage.removeItem(MEDIA_KEYS.logoLeft);localStorage.removeItem(MEDIA_KEYS.logoRight);localStorage.removeItem(MEDIA_KEYS.vpSignature);brandingForm()">Remove Images</button></div>`)}
+async function saveStudentPhoto(id,file){if(!id||!file)return;try{await saveImage(studentPhotoKey(id),file);toast("Student photo saved")}catch(e){toast(e.message,false)}}
 const esc=x=>String(x??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
 const C=id=>S.classes.find(x=>x.id===id)?.name||"";
 const SEC=id=>S.sections.find(x=>x.id===id)?.name||"";
@@ -164,15 +175,61 @@ function tbl(head,rows){
 function downloadTemplate(filename,headers,sample=[]){const ws=XLSX.utils.aoa_to_sheet([headers,...sample]);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Template");XLSX.writeFile(wb,filename)}
 async function bulkUpload(table,label,file,input){if(!file)return;try{const data=await file.arrayBuffer();const wb=XLSX.read(new Uint8Array(data),{type:"array"});const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:""});if(!rows.length)throw Error("No rows found");const cfg={students:["admission_no","roll_no","full_name","gender","class_id","section_id","house","apar_id","date_of_birth","father_name","mother_name","parent_phone","address","active"],classes:["name","display_order","active"],sections:["class_id","name","active"],subjects:["name","subject_name","code","class_id","active"],teachers:["full_name","email","phone","employee_id","active"],examinations:["name","exam_name","title","exam_date","class_id","max_marks","active"]};const allowed=cfg[table]||[];const norm=x=>String(x??"").trim().toLowerCase().replace(/[\s-]+/g,"_");const payload=rows.map(r=>{const o={};for(const k in r){const nk=norm(k);if(allowed.includes(nk)&&r[k]!=="")o[nk]=typeof r[k]==="string"?r[k].trim():r[k]}if("active"in o)o.active=!['false','no','0'].includes(String(o.active).toLowerCase());if("display_order"in o)o.display_order=Number(o.display_order||0);if("max_marks"in o)o.max_marks=Number(o.max_marks||0);return o}).filter(o=>Object.keys(o).length);if(!payload.length)throw Error("No usable columns. Download the Template first.");if(!confirm(`Upload ${payload.length} ${label} record(s)?`))return;const r=table==="students"?await S.sb.from(table).upsert(payload,{onConflict:"admission_no"}):await S.sb.from(table).insert(payload);if(r.error)throw r.error;toast(`${payload.length} ${label} record(s) uploaded`);input.value="";go(S.page)}catch(e){toast(e.message||String(e),false);input.value=""}}
 function bulkControls(table,label,headers,sample=[]){return `<button class="secondary" onclick='downloadTemplate(${JSON.stringify(label+"_Template.xlsx")},${JSON.stringify(headers)},${JSON.stringify(sample)})'>Template</button><label class="secondary" style="cursor:pointer">Bulk Upload <input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="bulkUpload('${table}','${label}',this.files[0],this)"></label>`}
-function editSimple(table,id,label,fields){const x=(S[table]||[]).find(a=>a.id===id)||{};const b=fields.map(([k,l,t])=>`<div class="field"><label>${l}</label><input id="ee_${k}" type="${t||"text"}" value="${esc(x[k])}"></div>`).join("");modal("Edit "+label,`<div class="form-grid">${b}</div><button class="primary full" onclick="saveSimple('${table}','${id}','${label}',${JSON.stringify(fields.map(f=>f[0]))})">Save Changes</button>`)}
-async function saveSimple(table,id,label,keys){const o={};for(const k of keys)o[k]=$("ee_"+k).value.trim();if("display_order"in o)o.display_order=Number(o.display_order||0);if("max_marks"in o)o.max_marks=Number(o.max_marks||0);const r=await S.sb.from(table).update(o).eq("id",id);if(r.error)return toast(r.error.message,false);closeModal();toast(label+" updated");go(S.page)}
-async function deleteSimple(table,id,label){if(!confirm("Delete "+label+"?"))return;const r=await S.sb.from(table).delete().eq("id",id);if(r.error)return toast(r.error.message,false);toast(label+" deleted");go(S.page)}
+function editSimple(table,id,label,fields){
+ const x=(S[table]||[]).find(a=>a.id===id)||{};
+ const b=fields.map(([k,l,t])=>{
+   const v=x[k];
+   if(t==="boolean") return `<div class="field"><label>${l}</label><select id="ee_${k}"><option value="true" ${v!==false?"selected":""}>Yes</option><option value="false" ${v===false?"selected":""}>No</option></select></div>`;
+   return `<div class="field"><label>${l}</label><input id="ee_${k}" type="${t||"text"}" value="${esc(v)}"></div>`;
+ }).join("");
+ modal("Edit "+label,`<div class="notice">You are editing this record. Tap <b>Save Changes</b> to update Supabase.</div><div class="form-grid">${b}</div><button id="saveEditBtn" class="primary full" onclick="saveSimple('${table}','${id}','${label}',${JSON.stringify(fields.map(f=>f[0]))})">Save Changes</button>`);
+}
+
+async function saveSimple(table,id,label,keys){
+ const btn=$("saveEditBtn"); if(btn)btn.disabled=true;
+ try{
+   const o={};
+   for(const k of keys){
+     const el=$("ee_"+k); if(!el)continue;
+     if(el.tagName==="SELECT" && (el.value==="true"||el.value==="false")) o[k]=el.value==="true";
+     else o[k]=el.value.trim();
+   }
+   if("display_order" in o)o.display_order=Number(o.display_order||0);
+   if("max_marks" in o)o.max_marks=Number(o.max_marks||0);
+   const r=await S.sb.from(table).update(o).eq("id",id).select("id");
+   if(r.error) throw r.error;
+   if(!r.data || !r.data.length) throw new Error("Update was not allowed. Please check the Supabase UPDATE policy for this table.");
+   closeModal();toast(label+" updated successfully");await go(S.page);
+ }catch(e){
+   toast("Edit failed: "+(e.message||e),false);
+   if(btn)btn.disabled=false;
+ }
+}
+
+async function deleteSimple(table,id,label){
+ if(!confirm("Delete this "+label+" permanently?"))return;
+ try{
+   const r=await S.sb.from(table).delete().eq("id",id).select("id");
+   if(r.error)throw r.error;
+   if(!r.data || !r.data.length)throw new Error("Delete was not allowed. Please check the Supabase DELETE policy for this table.");
+   toast(label+" deleted successfully");await go(S.page);
+ }catch(e){
+   const msg=String(e.message||e);
+   if(/foreign key|violates|constraint/i.test(msg)){
+     toast("Cannot delete: this record is used by other records.",false);
+   }else{
+     toast("Delete failed: "+msg,false);
+   }
+ }
+}
+
+async function delRow(table,id,label){ return deleteSimple(table,id,label); }
 
 async function dashboard(){
  const vals=await Promise.all(["students","classes","subjects","examinations"].map(async t=>{const r=await S.sb.from(t).select("*",{count:"exact",head:true});return r.count||0}));
  $("content").innerHTML=`<div class="grid">${[["Students",vals[0]],["Classes",vals[1]],["Subjects",vals[2]],["Examinations",vals[3]]].map(x=>`<div class="card kpi"><div class="label">${x[0]}</div><div class="num">${x[1]}</div></div>`).join("")}</div>
  <div class="section-title"><h3>JNV Result Automation</h3></div>
- <div class="notice"><b>Bulk Upload + Edit + Delete are available</b> in Students, Classes/Sections, Subjects, Teachers and Examinations. Use the Template button in each section.</div><div class="notice"><b>Co-Scholastic grades are annual.</b> Enter them once for each student for ${YEAR}; they automatically appear on the student's report card.</div>`
+ <div class="notice"><b>CRUD controls fixed.</b> Edit and Delete now verify the Supabase response and show the exact error if a database policy or relationship blocks the action.</div><div class="notice"><b>Bulk Upload + Edit + Delete are available</b> in Students, Classes/Sections, Subjects, Teachers and Examinations. Use the Template button in each section.</div><div class="notice"><b>Co-Scholastic grades are annual.</b> Enter them once for each student for ${YEAR}; they automatically appear on the student's report card.</div>`
 }
 async function students(){await lookups();renderStudents(S.students)}
 function renderStudents(arr){
@@ -192,7 +249,7 @@ function studentForm(id){
  <div class="field"><label>Section</label><select id="se">${S.sections.map(c=>`<option value="${c.id}" ${x.section_id===c.id?"selected":""}>${C(c.class_id)} - ${esc(c.name)}</option>`).join("")}</select></div>
  <div class="field"><label>House</label><input id="ho" value="${esc(x.house)}"></div><div class="field"><label>APAR ID</label><input id="apar" value="${esc(x.apar_id)}"></div><div class="field"><label>Date of Birth</label><input id="dob" type="date" value="${esc(x.date_of_birth)}"></div><div class="field"><label>Father Name</label><input id="fa" value="${esc(x.father_name)}"></div>
  <div class="field"><label>Mother Name</label><input id="mo" value="${esc(x.mother_name)}"></div><div class="field"><label>Parent Phone</label><input id="ph" value="${esc(x.parent_phone||x.phone)}"></div>
- <div class="field wide"><label>Address</label><textarea id="addr">${esc(x.address)}</textarea></div></div>
+ <div class="field wide"><label>Student Photo</label><input id="studentPhotoFile" type="file" accept="image/png,image/jpeg,image/webp" onchange="saveStudentPhoto('${id}',this.files[0])"><div class="mini">Upload passport-size photo. It will appear on the report card.</div>${id&&getStudentPhoto(id)?`<img class="branding-preview" src="${getStudentPhoto(id)}">`:""}</div></div>
  <button class="primary full" onclick="saveStudent('${id||""}')">Save Student</button>`)
 }
 async function saveStudent(id){
@@ -217,10 +274,6 @@ async function attendance(){
 }
 async function results(){
  await lookups();$("content").innerHTML=`<div class="notice"><b>Results & Analytics</b><br>Choose a student in Report Cards to generate the JNV-style report. Subject rows are generated dynamically from the Subjects table.</div>`
-}
-async function delRow(table,id,label){
- if(!confirm("Delete "+label+"?"))return;
- const r=await S.sb.from(table).delete().eq("id",id);if(r.error)return toast(r.error.message,false);toast(label+" deleted");go(S.page);
 }
 
 /* =========================
@@ -293,7 +346,7 @@ async function reports(){
  $("content").innerHTML=`<div class="toolbar">
  <select id="rpClass" onchange="loadReportStudents()"><option value="">All Classes</option>${S.classes.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join("")}</select>
  <select id="rpStudent"><option value="">Select Student</option>${students.map(x=>`<option value="${x.id}">${esc(x.roll_no)} - ${esc(x.full_name)}</option>`).join("")}</select>
- <button class="primary" onclick="showReport()">View Report Card</button>
+ <button class="primary" onclick="showReport()">View Report Card</button><button class="secondary" onclick="brandingForm()">⚙ Upload Logos / VP Signature</button>
  </div>
  <div class="notice">The report card follows the supplied JNV sample structure: Part A Scholastic, Part B Co-Scholastic, Part C Bagless Days, Part D Discipline, Part E General Studies, Part F Outstanding Achievement and Part G Attendance.</div>
  <div id="reportArea" style="margin-top:15px"></div>`
@@ -342,8 +395,8 @@ async function showReport(){
    return `<tr><td>${esc(s.name||s.subject_name)}</td><td>${vals[0]??"—"}</td><td>${vals[1]??"—"}</td><td>${total}</td><td>—</td></tr>`
  }).join("");
  $("reportArea").innerHTML=`<div class="report" id="printReport">
- <div class="report-header"><div class="report-logo">JNV<br>LOGO</div><div class="report-title">
- <h2>JAWAHAR NAVODAYA VIDYALAYA</h2><h3>REPORT CARD FOR CLASS ${esc(C(st.class_id))}</h3><p>ACADEMIC SESSION: ${YEAR}</p></div><div class="photo-box">Photograph</div></div>
+ <div class="report-header"><div class="report-logo">${getImage(MEDIA_KEYS.logoLeft)?`<img src="${getImage(MEDIA_KEYS.logoLeft)}" alt="Logo">`:"JNV<br>LOGO"}</div><div class="report-title">
+ <h2>JAWAHAR NAVODAYA VIDYALAYA</h2><h3>REPORT CARD FOR CLASS ${esc(C(st.class_id))}</h3><p>ACADEMIC SESSION: ${YEAR}</p></div><div class="report-logo">${getImage(MEDIA_KEYS.logoRight)?`<img src="${getImage(MEDIA_KEYS.logoRight)}" alt="Logo">`:"LOGO"}</div></div><div class="photo-box">${getStudentPhoto(st.id)?`<img src="${getStudentPhoto(st.id)}" alt="Student Photo">`:"Photograph"}</div>
  <div class="student-info">
  <div><b>Roll No:</b> ${esc(st.roll_no)}</div><div><b>APAR ID:</b> ${esc(st.apar_id||"")}</div>
  <div><b>Student's Name:</b> ${esc(st.full_name)}</div><div><b>Section:</b> ${esc(SEC(st.section_id))}</div>
@@ -365,7 +418,7 @@ async function showReport(){
  <div class="part-title">Part G: Attendance</div>
  <table><thead><tr><th>Term</th><th>Total Working Days</th><th>Number of Days Attended</th><th>% Attendance</th></tr></thead>
  <tbody><tr><td>Term-1</td><td>—</td><td>—</td><td>—</td></tr><tr><td>Term-2</td><td>—</td><td>—</td><td>—</td></tr></tbody></table>
- <div class="sign"><div>Signature of Class Teacher</div><div>Signature of Principal</div></div>
+ <div class="sign"><div>Signature of Class Teacher</div><div>Signature of Principal</div></div><div class="vp-sign"><div class="vp-sign-img">${getImage(MEDIA_KEYS.vpSignature)?`<img src="${getImage(MEDIA_KEYS.vpSignature)}" alt="Vice Principal Signature">`:""}</div><div class="vp-sign-line">Signature of Vice Principal</div></div>
  <div class="small-note" style="margin-top:20px"><b>Grading Scale for Co-scholastic Areas:</b> A — Exemplary, B — Proficient, C — Developing, D — Emerging, E — Beginner.</div>
  <div class="small-note" style="margin-top:8px"><b>Grading Scale for Discipline:</b> A — Outstanding, B — Very Good, C — Fair.</div>
  </div>
