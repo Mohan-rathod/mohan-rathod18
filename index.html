@@ -100,43 +100,96 @@ async function getResultData(group){
   const ids=ex.map(e=>e.id);
   const mr=ids.length?await S.sb.from('marks').select('*').in('examination_id',ids):{data:[]};
   if(mr.error)throw mr.error;
-  const byEx=Object.fromEntries(ex.map(e=>[e.id,e]));
-  const subjectMap=Object.fromEntries((S.subjects||[]).map(s=>[s.id,s]));
+
+  const subjectMap=Object.fromEntries((S.subjects||[]).filter(s=>s.active!==false).map(s=>[s.id,s]));
   const students=S.students.filter(s=>s.class_id===classId&&s.section_id===sectionId&&s.active!==false);
-  const byStudent={};
-  students.forEach(s=>byStudent[s.id]={student:s,subjects:[]});
 
-  // Build one subject entry for every examination/subject, then attach marks.
-  // This prevents the report card from being limited to six subjects and also
-  // handles records where examinations.subject_id is empty but marks.subject_id exists.
+  /*
+   * IMPORTANT:
+   * A report card must show every subject applicable to the class,
+   * not only subjects for which marks have already been entered.
+   *
+   * Subject order is built from:
+   *  1. teacher_subjects for this class/section
+   *  2. examinations in the selected examination group
+   *  3. existing marks
+   * If no class/section assignment exists yet, all active subjects are
+   * used as a safe fallback. Therefore there is NO 6-subject limit.
+   */
+  const subjectIds=[];
+  const addSubject=id=>{
+    if(id && subjectMap[id] && !subjectIds.includes(id))subjectIds.push(id);
+  };
+
+  (S.assignments||[])
+    .filter(a=>a.active!==false && a.class_id===classId && (!a.section_id || a.section_id===sectionId))
+    .sort((a,b)=>(subjectMap[a.subject_id]?.name||'').localeCompare(subjectMap[b.subject_id]?.name||''))
+    .forEach(a=>addSubject(a.subject_id));
+
+  ex.forEach(e=>addSubject(e.subject_id));
+  (mr.data||[]).forEach(m=>addSubject(m.subject_id));
+
+  // If teacher-subject assignments have not been created, show all active
+  // subjects rather than hiding subjects from the report card.
+  if(!subjectIds.length){
+    Object.values(subjectMap)
+      .sort((a,b)=>String(a.name).localeCompare(String(b.name)))
+      .forEach(s=>addSubject(s.id));
+  }
+
   const markMap=new Map((mr.data||[]).map(m=>[m.examination_id+'::'+m.student_id,m]));
-  students.forEach(st=>{
-    ex.forEach(e=>{
-      const m=markMap.get(e.id+'::'+st.id);
-      const subjectId=m?.subject_id||e?.subject_id||null;
-      const subjectObj=subjectMap[subjectId];
-      const subject=subjectObj?.name||'';
-      if(m||subjectId){
-        byStudent[st.id].subjects.push({exam:e,mark:m||{marks:null,max_marks:e.maximum_marks,attendance_status:'Present'},subject,subject_id:subjectId});
-      }
-    });
+
+  // Pick the examination for each subject. A subject without an examination
+  // still appears with blank marks.
+  const subjectEntries=subjectIds.map(subjectId=>{
+    const exam=ex.find(e=>e.subject_id===subjectId) || {
+      id:null,
+      subject_id:subjectId,
+      maximum_marks:100,
+      pass_marks:33,
+      name,
+      academic_year:year,
+      class_id:classId,
+      section_id:sectionId
+    };
+    return {subjectId,subject:subjectMap[subjectId]?.name||'',exam};
   });
 
-  const rows=Object.values(byStudent).map(x=>{
-    const valid=x.subjects.filter(z=>z.mark.marks!==null&&z.mark.marks!==undefined&&z.mark.attendance_status!=='Absent');
+  const rows=students.map(st=>{
+    const subjects=subjectEntries.map(({subjectId,subject,exam})=>{
+      const m=exam.id?markMap.get(exam.id+'::'+st.id):null;
+      return {
+        exam,
+        mark:m||{
+          marks:null,
+          max_marks:exam.maximum_marks||100,
+          attendance_status:'Present'
+        },
+        subject,
+        subject_id:subjectId
+      };
+    });
+
+    const valid=subjects.filter(z=>
+      z.mark.marks!==null &&
+      z.mark.marks!==undefined &&
+      z.mark.attendance_status!=='Absent'
+    );
     const total=valid.reduce((a,z)=>a+Number(z.mark.marks||0),0);
-    const max=valid.reduce((a,z)=>a+Number(z.mark.max_marks||z.exam.maximum_marks||0),0);
+    const max=valid.reduce((a,z)=>a+Number(z.mark.max_marks||z.exam.maximum_marks||100),0);
     const pct=max?total/max*100:0;
-    const failed=x.subjects.some(z=>z.mark.marks!==null&&z.mark.marks!==undefined&&z.mark.attendance_status!=='Absent'&&Number(z.mark.marks)<Number(z.exam.pass_marks||0));
-    const absent=x.subjects.some(z=>z.mark.attendance_status==='Absent');
-    return {...x,total,max,pct,failed,absent};
+    const failed=valid.some(z=>Number(z.mark.marks)<Number(z.exam.pass_marks||33));
+    const absent=subjects.some(z=>z.mark.attendance_status==='Absent');
+
+    return {...{student:st},subjects,total,max,pct,failed,absent};
   });
+
   rows.sort((a,b)=>b.pct-a.pct);
   rows.forEach((r,i)=>r.rank=i+1);
   return {name,year,classId,sectionId,ex,rows};
 }
 function grade(p){if(p>=91)return'A1';if(p>=81)return'A2';if(p>=71)return'B1';if(p>=61)return'B2';if(p>=51)return'C1';if(p>=41)return'C2';if(p>=33)return'D';return'E'}
-async function loadResults(){try{const d=await getResultData($("resultGroup").value);const appeared=d.rows.filter(r=>r.subjects.length&&r.subjects.some(z=>z.mark.marks!==null&&z.mark.attendance_status!=='Absent')).length;const passed=d.rows.filter(r=>r.subjects.length&&r.pct>=33&&!r.failed&&!r.absent).length;const avg=d.rows.length?d.rows.reduce((a,r)=>a+r.pct,0)/d.rows.length:0;const high=d.rows.length?Math.max(...d.rows.map(r=>r.pct)):0,low=d.rows.length?Math.min(...d.rows.map(r=>r.pct)):0;const subjectMap={};d.rows.forEach(r=>r.subjects.forEach(z=>{const k=z.exam.subject_id;if(!subjectMap[k])subjectMap[k]={name:z.subject,marks:[],max:[]};if(z.mark.marks!==null&&z.mark.attendance_status!=='Absent'){subjectMap[k].marks.push(Number(z.mark.marks));subjectMap[k].max.push(Number(z.mark.max_marks||z.exam.maximum_marks||100))}}));$("resultBody").innerHTML=`<div class="analysis">${[['Students',d.rows.length],['Appeared',appeared],['Passed',passed],['Failed',d.rows.filter(r=>r.failed||r.absent).length],['Pass %',d.rows.length?(passed/d.rows.length*100).toFixed(2)+'%':'0%'],['Average',avg.toFixed(2)+'%'],['Highest',high.toFixed(2)+'%'],['Lowest',low.toFixed(2)+'%']].map(x=>`<div class="card"><div class="mini">${x[0]}</div><div class="num">${x[1]}</div></div>`).join('')}</div><div class="two"><div class="card"><h3>Subject-wise Analysis</h3>${Object.values(subjectMap).map(s=>{const p=s.marks.length?s.marks.reduce((a,v,i)=>a+v/s.max[i]*100,0)/s.marks.length:0;return `<div style="margin:12px 0"><div style="display:flex;justify-content:space-between"><b>${esc(s.name)}</b><span>${p.toFixed(2)}%</span></div><div class="track"><div class="fill" style="width:${Math.min(100,p)}%"></div></div></div>`}).join('')||'<div class="mini">No marks entered.</div>'}</div><div class="card"><h3>Performance Summary</h3><p>Pass Rate: <b>${d.rows.length?(passed/d.rows.length*100).toFixed(2):0}%</b></p><p>Class Average: <b>${avg.toFixed(2)}%</b></p><p>Highest: <b>${high.toFixed(2)}%</b></p><p>Lowest: <b>${low.toFixed(2)}%</b></p></div></div><div class="section-title"><h3>Top Performers</h3></div>${tbl(['Rank','Roll','Name','Total','%','Grade','Status'],d.rows.slice(0,10).map(r=>`<tr><td>${r.rank}</td><td>${esc(r.student.roll_no)}</td><td>${esc(r.student.full_name)}</td><td>${r.total.toFixed(2)} / ${r.max.toFixed(2)}</td><td>${r.pct.toFixed(2)}%</td><td>${grade(r.pct)}</td><td>${r.failed||r.absent?'<span class="badge danger">FAIL</span>':'<span class="badge">PASS</span>'}</td></tr>`).join(''))}<div class="section-title"><h3>Student-wise Consolidated Result</h3><button class="primary" onclick="generateAllReportCards()">Generate All Report Cards</button></div>${tbl(['Rank','Roll','Admission','Name','Subjects','Total','%','Grade','Status','Report'],d.rows.map(r=>`<tr><td>${r.rank}</td><td>${esc(r.student.roll_no)}</td><td>${esc(r.student.admission_no)}</td><td>${esc(r.student.full_name)}</td><td>${r.subjects.length}</td><td>${r.total.toFixed(2)} / ${r.max.toFixed(2)}</td><td>${r.pct.toFixed(2)}%</td><td>${grade(r.pct)}</td><td>${r.failed||r.absent?'<span class="badge danger">FAIL</span>':'<span class="badge">PASS</span>'}</td><td><button class="secondary" onclick="openReport('${r.student.id}','${esc($("resultGroup").value)}')">PDF/Web</button></td></tr>`).join(''))}`;S.currentResult=d}catch(e){$("resultBody").innerHTML=`<div class="err">${esc(e.message)}</div>`}}
+async function loadResults(){try{const d=await getResultData($("resultGroup").value);const appeared=d.rows.filter(r=>r.subjects.length&&r.subjects.some(z=>z.mark.marks!==null&&z.mark.attendance_status!=='Absent')).length;const passed=d.rows.filter(r=>r.subjects.length&&r.pct>=33&&!r.failed&&!r.absent).length;const avg=d.rows.length?d.rows.reduce((a,r)=>a+r.pct,0)/d.rows.length:0;const high=d.rows.length?Math.max(...d.rows.map(r=>r.pct)):0,low=d.rows.length?Math.min(...d.rows.map(r=>r.pct)):0;const subjectMap={};d.rows.forEach(r=>r.subjects.forEach(z=>{const k=z.subject_id;if(!subjectMap[k])subjectMap[k]={name:z.subject,marks:[],max:[]};if(z.mark.marks!==null&&z.mark.attendance_status!=='Absent'){subjectMap[k].marks.push(Number(z.mark.marks));subjectMap[k].max.push(Number(z.mark.max_marks||z.exam.maximum_marks||100))}}));$("resultBody").innerHTML=`<div class="analysis">${[['Students',d.rows.length],['Appeared',appeared],['Passed',passed],['Failed',d.rows.filter(r=>r.failed||r.absent).length],['Pass %',d.rows.length?(passed/d.rows.length*100).toFixed(2)+'%':'0%'],['Average',avg.toFixed(2)+'%'],['Highest',high.toFixed(2)+'%'],['Lowest',low.toFixed(2)+'%']].map(x=>`<div class="card"><div class="mini">${x[0]}</div><div class="num">${x[1]}</div></div>`).join('')}</div><div class="two"><div class="card"><h3>Subject-wise Analysis</h3>${Object.values(subjectMap).map(s=>{const p=s.marks.length?s.marks.reduce((a,v,i)=>a+v/s.max[i]*100,0)/s.marks.length:0;return `<div style="margin:12px 0"><div style="display:flex;justify-content:space-between"><b>${esc(s.name)}</b><span>${p.toFixed(2)}%</span></div><div class="track"><div class="fill" style="width:${Math.min(100,p)}%"></div></div></div>`}).join('')||'<div class="mini">No marks entered.</div>'}</div><div class="card"><h3>Performance Summary</h3><p>Pass Rate: <b>${d.rows.length?(passed/d.rows.length*100).toFixed(2):0}%</b></p><p>Class Average: <b>${avg.toFixed(2)}%</b></p><p>Highest: <b>${high.toFixed(2)}%</b></p><p>Lowest: <b>${low.toFixed(2)}%</b></p></div></div><div class="section-title"><h3>Top Performers</h3></div>${tbl(['Rank','Roll','Name','Total','%','Grade','Status'],d.rows.slice(0,10).map(r=>`<tr><td>${r.rank}</td><td>${esc(r.student.roll_no)}</td><td>${esc(r.student.full_name)}</td><td>${r.total.toFixed(2)} / ${r.max.toFixed(2)}</td><td>${r.pct.toFixed(2)}%</td><td>${grade(r.pct)}</td><td>${r.failed||r.absent?'<span class="badge danger">FAIL</span>':'<span class="badge">PASS</span>'}</td></tr>`).join(''))}<div class="section-title"><h3>Student-wise Consolidated Result</h3><button class="primary" onclick="generateAllReportCards()">Generate All Report Cards</button></div>${tbl(['Rank','Roll','Admission','Name','Subjects','Total','%','Grade','Status','Report'],d.rows.map(r=>`<tr><td>${r.rank}</td><td>${esc(r.student.roll_no)}</td><td>${esc(r.student.admission_no)}</td><td>${esc(r.student.full_name)}</td><td>${r.subjects.length}</td><td>${r.total.toFixed(2)} / ${r.max.toFixed(2)}</td><td>${r.pct.toFixed(2)}%</td><td>${grade(r.pct)}</td><td>${r.failed||r.absent?'<span class="badge danger">FAIL</span>':'<span class="badge">PASS</span>'}</td><td><button class="secondary" onclick="openReport('${r.student.id}','${esc($("resultGroup").value)}')">PDF/Web</button></td></tr>`).join(''))}`;S.currentResult=d}catch(e){$("resultBody").innerHTML=`<div class="err">${esc(e.message)}</div>`}}
 async function exportResults(type){const d=S.currentResult;if(!d)return toast('Load results first',false);const rows=d.rows.map(r=>({Rank:r.rank,Roll:r.student.roll_no,Admission:r.student.admission_no,Name:r.student.full_name,Subjects:r.subjects.length,Total:r.total,Max:r.max,Percentage:+r.pct.toFixed(2),Grade:grade(r.pct),Status:r.failed||r.absent?'FAIL':'PASS'}));const ws=XLSX.utils.json_to_sheet(rows),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Result');XLSX.writeFile(wb,`result_${d.name}_${d.classId}.xlsx`)}
 async function reports(){await lookups();const groups=[...new Set(S.exams.map(e=>e.name+'||'+e.academic_year+'||'+e.class_id+'||'+e.section_id))];$("content").innerHTML=`<div class="card"><div class="toolbar"><div class="field" style="min-width:300px;flex:1"><label>Examination Group</label><select id="rcGroup" onchange="loadReportStudents()">${groups.map(g=>{const [n,y,c,s]=g.split('||');return `<option value="${esc(g)}">${esc(n)} — ${esc(y)} — ${C(c)} ${SEC(s)}</option>`}).join('')}</select></div><button class="ghost" onclick="window.print()">Print</button></div><div id="rcStudents"></div></div>`;if(groups.length)loadReportStudents()}
 // Compatibility alias: both names are supported.
