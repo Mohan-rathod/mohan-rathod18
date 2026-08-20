@@ -3,854 +3,335 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Smart School AI — JNV Result Automation</title>
-<meta name="theme-color" content="#123f29">
+<title>JNV Result Automation 2026–27</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.3/papaparse.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <style>
-:root{--g:#123f29;--g2:#245d3e;--bg:#f4f7f5;--card:#fff;--txt:#18231d;--muted:#68756e;--line:#dce5df;--danger:#b3261e;--warn:#9a6500}
-*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--txt)}
-button,input,select,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!important}
-.login-wrap{min-height:100vh;background:linear-gradient(145deg,#092f1e,#174d31);display:grid;place-items:center;padding:20px}
-.login{width:min(500px,100%);background:#fff;border-radius:25px;padding:32px;box-shadow:0 20px 60px #0005}
-.logo{width:90px;height:90px;border-radius:25px;background:#edf4ef;display:grid;place-items:center;margin:auto;color:var(--g);font-weight:900;text-align:center}
-.login h1{text-align:center;margin:16px 0 5px}.sub,.year{text-align:center;color:var(--muted)}.year{font-weight:bold}
-.field{margin:10px 0}.field label{display:block;font-size:13px;font-weight:750;margin-bottom:5px}
-.field input,.field select,.field textarea,.toolbar input,.toolbar select{width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;background:#fff}
-.field textarea{min-height:90px}.primary,.secondary,.danger,.ghost{padding:10px 14px;border-radius:10px;font-weight:750;border:0}
-.primary{background:var(--g);color:#fff}.secondary{background:#eaf2ed;color:var(--g)}.danger{background:#fff0ef;color:var(--danger)}.ghost{background:#fff;border:1px solid var(--line)}.full{width:100%}
-.err{color:var(--danger);margin-top:10px;font-weight:700}.hint{font-size:12px;color:var(--muted);margin-top:10px}
-.app{display:flex;min-height:100vh}.side{width:255px;background:#103a25;color:#fff;position:fixed;inset:0 auto 0 0;padding:15px;overflow:auto;z-index:10}
-.brand{font-size:22px;font-weight:900;margin:8px}.school{font-size:11px;color:#b9d1c4;padding:5px 8px 15px;line-height:1.4}
-.nav button{display:block;width:100%;text-align:left;background:none;color:#dceae2;border:0;padding:10px;border-radius:9px;margin:2px 0}
-.nav button.active,.nav button:hover{background:#285d41;color:#fff}.main{margin-left:255px;width:calc(100% - 255px);padding:20px}
-.top{display:flex;justify-content:space-between;gap:15px;margin-bottom:18px}.top h2{margin:0}.role{background:#fff;border:1px solid var(--line);border-radius:999px;padding:7px 12px;font-weight:bold}
-.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.card{background:#fff;border:1px solid var(--line);border-radius:15px;padding:16px;box-shadow:0 3px 12px #173a2010}
-.kpi .label{color:var(--muted)}.kpi .num{font-size:32px;font-weight:900;margin-top:5px}
-.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:end}.toolbar>*{width:auto}.toolbar .search{min-width:220px}
-.section-title{display:flex;justify-content:space-between;align-items:center;margin:20px 0 10px;gap:10px}.section-title h3{margin:0}
-.table-wrap{overflow:auto;background:#fff;border:1px solid var(--line);border-radius:14px}.table{width:100%;border-collapse:collapse;min-width:760px}
-.table th,.table td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}.table th{background:#f4f7f5;font-size:12px;position:sticky;top:0}
-.actions{display:flex;gap:5px;flex-wrap:wrap}.badge{display:inline-block;padding:4px 8px;border-radius:99px;background:#edf4ef;color:var(--g);font-size:11px;font-weight:bold}
-.badge.warn{background:#fff5dc;color:var(--warn)}.badge.danger{background:#fff0ef;color:var(--danger)}
-.notice{background:#eef6f1;border:1px solid #d6e8dc;padding:13px;border-radius:12px}
-.modal{position:fixed;inset:0;background:#0007;display:grid;place-items:center;padding:15px;z-index:30}.modal-box{background:#fff;width:min(950px,100%);max-height:94vh;overflow:auto;border-radius:18px;padding:18px}
-.modal-head{display:flex;justify-content:space-between;align-items:center;gap:10px}.modal-head h3{margin:0}.close{border:0;border-radius:50%;width:34px;height:34px}
-.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.wide{grid-column:1/-1}
-.report{background:#fff;border:1px solid #ccd9d0;padding:22px;max-width:1050px;margin:auto}.report table{width:100%;border-collapse:collapse}
-.report th,.report td{border:1px solid #ccd9d0;padding:6px;font-size:11px}.report th{background:#eef5f0}
-.sign{display:grid;grid-template-columns:1fr 1fr;gap:50px;margin-top:40px;text-align:center}.sign div{border-top:1px solid #555;padding-top:5px}
-.toast{position:fixed;right:18px;bottom:18px;color:#fff;background:#187a45;padding:12px 16px;border-radius:10px;z-index:50;font-weight:bold}
-.mini{font-size:12px;color:var(--muted)}.success-text{color:var(--g)}.danger-text{color:var(--danger)}
-.cs-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.grade-input{text-transform:uppercase;font-weight:800;text-align:center}
-.report-header{display:grid;grid-template-columns:90px 1fr 90px;gap:15px;align-items:center}.report-logo{width:75px;height:75px;border:1px solid #aaa;display:grid;place-items:center;font-size:9px;text-align:center}
-.photo-box{width:70px;height:90px;border:1px solid #777;display:grid;place-items:center;font-size:10px;text-align:center;overflow:hidden}.photo-box img{width:100%;height:100%;object-fit:cover}
-.report-title{text-align:center}.report-title h2{margin:2px;font-size:17px}.report-title h3{margin:2px;font-size:13px}.report-title p{margin:2px;font-size:11px}
-.student-info{display:grid;grid-template-columns:1fr 1fr;gap:4px 30px;border-top:1px solid #333;border-bottom:1px solid #333;padding:8px 0;margin:10px 0;font-size:11px}
-.part-title{font-weight:900;margin:12px 0 4px;font-size:12px}.small-note{font-size:9px;color:#444}
-@media(max-width:900px){.side{width:70px;padding:8px}.brand{font-size:0;text-align:center}.brand:after{content:"SS";font-size:19px}.school{display:none}.nav button{font-size:0;text-align:center}.nav button:before{content:"•";font-size:23px}.main{margin-left:70px;width:calc(100% - 70px);padding:12px}.grid{grid-template-columns:1fr 1fr}}
-@media(max-width:560px){.grid,.cs-grid{grid-template-columns:1fr}.form-grid{grid-template-columns:1fr}.wide{grid-column:auto}.top{flex-direction:column}.sign{grid-template-columns:1fr;gap:30px}.login{padding:24px}.report-header{grid-template-columns:60px 1fr 60px}.report-logo{width:55px;height:55px}.photo-box{width:55px;height:70px}.student-info{grid-template-columns:1fr}}
-@media print{.side,.top,.toolbar,.no-print{display:none!important}.main{margin:0;width:100%;padding:5px}.report{border:0;box-shadow:none;max-width:none}.report-card-print{display:block}}
-
-.branding-preview{display:block;width:100px;height:80px;object-fit:contain;border:1px solid var(--line);border-radius:8px;margin-top:8px;background:#fff}.signature-preview{display:block;max-width:220px;height:60px;object-fit:contain;border:1px solid var(--line);border-radius:8px;margin-top:8px;background:#fff}.report-logo img{width:100%;height:100%;object-fit:contain}.vp-sign{width:250px;margin:35px auto 0;text-align:center}.vp-sign-img{height:55px;display:flex;align-items:flex-end;justify-content:center}.vp-sign-img img{max-width:190px;max-height:55px;object-fit:contain}.vp-sign-line{border-top:1px solid #555;padding-top:5px;font-size:11px}.
-
-
-.report-student-photo{width:70px;height:90px;border:1px solid #777;display:grid;place-items:center;font-size:10px;text-align:center;overflow:hidden;float:right;margin:-2px 0 0 12px;background:#fff}.report-student-photo img{width:100%;height:100%;object-fit:cover}.student-info-wrap{display:grid;grid-template-columns:1fr 85px;gap:12px;border-top:1px solid #333;border-bottom:1px solid #333;padding:8px 0;margin:10px 0}.student-info-wrap .student-info{border:0;padding:0;margin:0}.sign{display:grid;grid-template-columns:1fr 1fr 1fr;gap:35px;margin-top:42px;text-align:center;align-items:end}.sign-box{min-height:65px;display:flex;flex-direction:column;justify-content:flex-end}.sign-img{height:42px;display:flex;align-items:flex-end;justify-content:center}.sign-img img{max-width:150px;max-height:42px;object-fit:contain}.sign-line{border-top:1px solid #555;padding-top:5px;font-size:11px}.vp-sign{display:none!important}
-@media(max-width:560px){.sign{grid-template-columns:1fr;gap:22px}.student-info-wrap{grid-template-columns:1fr 70px}.report-student-photo{width:60px;height:75px}}
+:root{--g:#103d29;--g2:#236344;--bg:#f4f7f5;--card:#fff;--txt:#18231d;--muted:#69766f;--line:#dce5df;--ok:#187a45;--danger:#b3261e;--warn:#9a6500}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--txt)}
+button,input,select,textarea{font:inherit}button{cursor:pointer;border:0}.hidden{display:none!important}
+.login-wrap{min-height:100vh;background:linear-gradient(145deg,#092f1e,#174d31);display:grid;place-items:center;padding:20px}.login{width:min(500px,100%);background:#fff;border-radius:28px;padding:34px;box-shadow:0 25px 70px #0005}.login-logo{width:112px;height:112px;border-radius:50%;background:#edf4ef;display:grid;place-items:center;margin:auto;font-size:43px;font-weight:850;color:var(--g)}
+h1{font-size:31px;line-height:1.05;margin:18px 0 8px;text-align:center}.sub,.year{text-align:center;color:var(--muted)}.year{font-weight:800}.field{margin:12px 0}.field label{display:block;font-size:13px;font-weight:750;margin-bottom:6px}.field input,.field select,.field textarea{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:11px;background:#fff}.field textarea{min-height:80px}
+.primary{background:var(--g);color:#fff;padding:11px 16px;border-radius:11px;font-weight:750}.primary.full{width:100%}.secondary{background:#eaf2ed;color:var(--g);padding:10px 14px;border-radius:10px;font-weight:750}.danger{background:#fff0ef;color:var(--danger);padding:10px 14px;border-radius:10px;font-weight:750}.ghost{background:#fff;border:1px solid var(--line);color:var(--txt);padding:9px 12px;border-radius:10px;font-weight:700}.err{color:var(--danger);font-weight:650;margin-top:12px}.hint{color:var(--muted);font-size:12px;margin-top:12px}
+.app{display:flex;min-height:100vh}.side{width:250px;background:#103a25;color:#fff;padding:16px;position:fixed;inset:0 auto 0 0;z-index:10;overflow:auto}.brand{font-size:22px;font-weight:850;margin:8px 8px 20px}.school-mini{font-size:11px;color:#b9d1c4;padding:0 8px 16px;line-height:1.35}.nav button{display:block;width:100%;text-align:left;background:transparent;color:#dceae2;padding:11px;border-radius:10px;margin:2px 0}.nav button.active,.nav button:hover{background:#285d41;color:#fff}.main{margin-left:250px;width:calc(100% - 250px);padding:22px}.top{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-bottom:20px}.top h2{margin:0;font-size:29px}.role{background:#fff;border:1px solid var(--line);padding:8px 13px;border-radius:999px;font-weight:700}
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.card{background:var(--card);border:1px solid var(--line);border-radius:17px;padding:18px;box-shadow:0 3px 14px #173a2010}.kpi .label{color:var(--muted)}.kpi .num{font-size:34px;font-weight:850;margin-top:6px}.section-title{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:22px 0 11px}.section-title h3{margin:0}.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.toolbar input,.toolbar select{padding:10px;border:1px solid var(--line);border-radius:10px;background:#fff}.table-wrap{overflow:auto;background:#fff;border:1px solid var(--line);border-radius:15px}.table{width:100%;border-collapse:collapse;min-width:760px}.table th,.table td{padding:10px 11px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}.table th{background:#f4f7f5;font-size:12px;position:sticky;top:0}.actions{display:flex;gap:6px;flex-wrap:wrap}.badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#edf4ef;color:var(--g);font-size:11px;font-weight:800}.badge.warn{background:#fff5dc;color:var(--warn)}.badge.danger{background:#fff0ef;color:var(--danger)}.empty{padding:32px;text-align:center;color:var(--muted)}.notice{background:#eef6f1;border:1px solid #d6e8dc;padding:14px;border-radius:14px;color:#24563c}
+.quick{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.quick .card{min-height:140px}.modal{position:fixed;inset:0;background:#0007;display:grid;place-items:center;padding:18px;z-index:30}.modal-box{background:#fff;width:min(920px,100%);max-height:94vh;overflow:auto;border-radius:20px;padding:21px}.modal-head{display:flex;justify-content:space-between;align-items:center;gap:10px}.close{background:#eee;border-radius:50%;width:35px;height:35px}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.full{grid-column:1/-1}.import-box{border:2px dashed #c9d8cf;padding:22px;border-radius:15px;text-align:center;background:#f8fbf9}.sticky-actions{position:sticky;bottom:0;background:#fff;border-top:1px solid var(--line);padding:12px;margin:12px -21px -21px;display:flex;gap:8px;justify-content:flex-end}.marks-table input{width:95px}.small{font-size:12px}.photo-thumb{width:44px;height:54px;object-fit:cover;border:1px solid var(--line);border-radius:6px}.branding-preview{display:grid;grid-template-columns:1fr 1fr 1fr;gap:15px;align-items:center;text-align:center}.branding-preview img{max-width:110px;max-height:90px;object-fit:contain}.logo-upload{display:flex;gap:12px;align-items:center}.logo-box{width:100px;height:80px;border:1px dashed #aaa;display:grid;place-items:center;background:#fafafa}.pill{padding:5px 9px;border-radius:999px;background:#eef5f0;font-size:11px;font-weight:700}
+.report-card{background:#fff;border:1px solid #cfd8d2;padding:20px;max-width:900px;margin:auto}.report-head{display:grid;grid-template-columns:100px 1fr 100px;gap:15px;align-items:center;text-align:center}.report-head img{max-width:90px;max-height:90px;object-fit:contain}.report-title{font-weight:850;font-size:18px}.report-table{width:100%;border-collapse:collapse;margin-top:8px}.report-table th,.report-table td{border:1px solid #cbd5cf;padding:5px;font-size:11px}.report-table th{background:#eef4f0}.student-photo{width:92px;height:110px;object-fit:cover;border:1px solid #777}.signatures{display:grid;grid-template-columns:1fr 1fr;gap:70px;margin-top:38px;text-align:center}.sig-line{border-top:1px solid #555;padding-top:7px}.report-actions{display:flex;gap:8px;justify-content:center;margin-top:15px}
+@media(max-width:900px){.side{width:72px;padding:9px}.brand{font-size:0;text-align:center}.brand:after{content:"JNV";font-size:19px}.school-mini{display:none}.nav button{font-size:0;text-align:center}.nav button:before{content:"•";font-size:24px}.main{margin-left:72px;width:calc(100% - 72px);padding:14px}.grid{grid-template-columns:1fr 1fr}.quick{grid-template-columns:1fr 1fr}}
+@media(max-width:560px){.grid,.quick{grid-template-columns:1fr}.form-grid{grid-template-columns:1fr}.full{grid-column:auto}.top{align-items:flex-start;flex-direction:column}.login{padding:25px}.report-head{grid-template-columns:70px 1fr 90px}.signatures{gap:20px}.report-card{padding:10px}}
 </style>
 </head>
-<body><div id="root"></div>
+<body>
+<div id="root"></div>
 <script>
-const DEFAULT_SCHOOL_NAME = "PM SHRI Jawahar Navodaya Vidyalaya, Wargal, Siddipet";
-function getSchoolName(){ return localStorage.getItem("jnv_school_name") || DEFAULT_SCHOOL_NAME; }
 const CONFIG={
-  SUPABASE_URL:"https://mnilsvgjuwnniquukedk.supabase.co",
-  SUPABASE_ANON_KEY:"sb_publishable_7chu45G-OQ6LfdEd4rL-qw_V1VNNbXi"
+ SUPABASE_URL:"https://mnilsvgjuwnniquukedk.supabase.co",
+ SUPABASE_ANON_KEY:"sb_publishable_7chu45G-OQ6LfdEd4rL-qw_V1VNNbXi"
 };
-const SCHOOL=getSchoolName();
+const DEFAULT_SCHOOL="PM SHRI Jawahar Navodaya Vidyalaya, Wargal, Siddipet";
 const YEAR="2026-27";
-const S={
-  sb:null,user:null,profile:null,page:"dashboard",
-  classes:[],sections:[],students:[],subjects:[],exams:[],teachers:[],assignments:[],co:[],
-  selectedClass:"",selectedSection:""
-};
-const $=id=>document.getElementById(id);
+const state={sb:null,user:null,profile:null,page:"dashboard",settings:{school_name:DEFAULT_SCHOOL,logo_left:"",logo_right:"",vp_signature:"",principal_signature:""},classes:[],sections:[],students:[],subjects:[],exams:[],teachers:[],assignments:[],resultRows:[]};
+let importRows=[],teacherRows=[],assignmentRows=[];
 
-const MEDIA_KEYS={logoLeft:"jnv_logo_left",logoRight:"jnv_logo_right",vpSignature:"jnv_vp_signature",principalSignature:"jnv_principal_signature"};
-function getImage(key){return localStorage.getItem(key)||""}
-function saveImage(key,file){return new Promise((resolve,reject)=>{if(!file)return resolve("");const r=new FileReader();r.onload=()=>{try{localStorage.setItem(key,r.result);resolve(r.result)}catch(e){reject(new Error("Image too large. Please use a smaller JPG/PNG."))}};r.onerror=()=>reject(new Error("Could not read image."));r.readAsDataURL(file)})}
-function studentPhotoKey(id){return "jnv_student_photo_"+id}
-function getStudentPhoto(id){return localStorage.getItem(studentPhotoKey(id))||""}
-async function saveBranding(){
-  try{
-    const l=$("logoLeftFile")?.files?.[0],r=$("logoRightFile")?.files?.[0],
-          v=$("vpSigFile")?.files?.[0],p=$("principalSigFile")?.files?.[0];
-    if(l)await saveImage(MEDIA_KEYS.logoLeft,l);
-    if(r)await saveImage(MEDIA_KEYS.logoRight,r);
-    if(v)await saveImage(MEDIA_KEYS.vpSignature,v);
-    if(p)await saveImage(MEDIA_KEYS.principalSignature,p);
-    toast("Report-card images saved");brandingForm();
-  }catch(e){toast(e.message,false)}
-}
-function brandingForm(){
-  const l=getImage(MEDIA_KEYS.logoLeft),r=getImage(MEDIA_KEYS.logoRight),
-        v=getImage(MEDIA_KEYS.vpSignature),p=getImage(MEDIA_KEYS.principalSignature);
-  modal("Report Card Branding",`<div class="notice"><b>Upload report-card images.</b>
-  They are stored in this browser and will appear on report cards made on this device.</div>
-  <div class="form-grid">
-    <div class="field"><label>Top-left Logo</label><input id="logoLeftFile" type="file" accept="image/png,image/jpeg,image/webp">
-      ${l?`<img class="branding-preview" src="${l}">`:"<div class=mini>No logo uploaded</div>"}</div>
-    <div class="field"><label>Top-right Logo</label><input id="logoRightFile" type="file" accept="image/png,image/jpeg,image/webp">
-      ${r?`<img class="branding-preview" src="${r}">`:"<div class=mini>No logo uploaded</div>"}</div>
-    <div class="field"><label>Vice Principal Signature</label><input id="vpSigFile" type="file" accept="image/png,image/jpeg,image/webp">
-      ${v?`<img class="signature-preview" src="${v}">`:"<div class=mini>No signature uploaded</div>"}</div>
-    <div class="field"><label>Principal Signature</label><input id="principalSigFile" type="file" accept="image/png,image/jpeg,image/webp">
-      ${p?`<img class="signature-preview" src="${p}">`:"<div class=mini>No signature uploaded</div>"}</div>
-  </div>
-  <div class="actions"><button class="primary" onclick="saveBranding()">Save Images</button>
-  <button class="ghost" onclick="removeBranding()">Remove Images</button></div>`)
-}
-function removeBranding(){
-  [MEDIA_KEYS.logoLeft,MEDIA_KEYS.logoRight,MEDIA_KEYS.vpSignature,MEDIA_KEYS.principalSignature].forEach(k=>localStorage.removeItem(k));
-  brandingForm();
-}
-async function saveStudentPhoto(id,file){if(!id||!file)return;try{await saveImage(studentPhotoKey(id),file);toast("Student photo saved")}catch(e){toast(e.message,false)}}
-const esc=x=>String(x??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
-const C=id=>S.classes.find(x=>x.id===id)?.name||"";
-const SEC=id=>S.sections.find(x=>x.id===id)?.name||"";
-const SUB=id=>S.subjects.find(x=>x.id===id)?.name||"";
-const TC=id=>S.teachers.find(x=>x.id===id)?.full_name||"Not Assigned";
-const isAdmin=()=>String(S.profile?.role||"teacher").toLowerCase()==="admin";
-function toast(x,ok=true){const e=$("toast");if(!e)return;e.textContent=x;e.style.background=ok?"#187a45":"#b3261e";e.classList.remove("hidden");setTimeout(()=>e.classList.add("hidden"),3000)}
-function login(){
- document.body.innerHTML=`<div class="login-wrap"><div class="login"><div class="logo">SMART<br>SCHOOL</div>
- <h1>Smart School AI</h1><div class="sub">School Management • Examination • Analytics</div><div class="year">${YEAR}</div>
- <div class="field"><label>Email</label><input id="email" type="email" autocomplete="username"></div>
- <div class="field"><label>Password</label><input id="password" type="password" autocomplete="current-password"></div>
- <button id="loginBtn" class="primary full" onclick="signIn()">Sign in</button>
- <button class="ghost full" style="margin-top:8px" onclick="resetPassword()">Forgot password?</button>
- <div id="loginErr" class="err"></div><div class="hint">Authentication is handled by Supabase. Never share your password or OTP.</div>
- </div></div>`;
- $("password").addEventListener("keydown",e=>{if(e.key==="Enter")signIn()});
-}
-function nav(p,l,i){return `<button class="${S.page===p?"active":""}" onclick="go('${p}')">${i} &nbsp;${l}</button>`}
-function shell(){
- document.body.innerHTML=`<div class="app"><aside class="side"><div class="brand">Smart School</div>
- <div class="school">${SCHOOL}<br>Academic Year ${YEAR}</div><div class="nav">
- ${nav("dashboard","Dashboard","▣")}${nav("students","Students","●")}${nav("classes","Classes & Sections","◆")}
- ${nav("subjects","Subjects","◇")}${nav("teachers","Teachers","♟")}${nav("exams","Examinations","▤")}
- ${nav("marks","Marks Entry","✎")}${nav("coscholastic","Co-Scholastic","◆")}${nav("attendance","Attendance","✓")}
- ${nav("results","Results & Analytics","★")}${nav("reportcards","Report Cards","▣")}
- <button onclick="signOut()">⇥ &nbsp;Sign out</button></div></aside>
- <main class="main"><div class="top"><div><h2 id="title">Dashboard</h2><small>${SCHOOL}</small></div>
- <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-  <button class="secondary no-print" onclick="openSchoolNameSettings()">⚙ School Name</button>
-  <button class="secondary no-print" onclick="brandingForm()">🖼 Branding</button>
-  <div class="role">${esc(S.profile?.full_name||S.user?.email||"")} · ${esc(S.profile?.role||"teacher")}</div>
-</div></div>
- <div id="content"></div></main></div><div id="modal"></div><div id="toast" class="toast hidden"></div>`;
-}
+function $(id){return document.getElementById(id)}
+function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
+function isAdmin(){return String(state.profile?.role||"teacher").toLowerCase()==="admin"}
+function schoolName(){return state.settings.school_name||DEFAULT_SCHOOL}
+function toast(msg,ok=true){const e=$("toast");if(!e)return;e.textContent=msg;e.style.background=ok?"#187a45":"#b3261e";e.classList.remove("hidden");setTimeout(()=>e.classList.add("hidden"),3500)}
+function nav(page,label,icon){return `<button class="${state.page===page?"active":""}" onclick="go('${page}')">${icon} &nbsp;${label}</button>`}
+function imgOrPlaceholder(url,label){return url?`<img src="${esc(url)}" alt="${esc(label)}">`:`<div style="font-weight:800;color:#777">${esc(label)}</div>`}
+function loginHTML(){return `<div class="login-wrap"><div class="login"><div class="login-logo">JNV</div><h1>JNV Result Automation</h1><div class="sub">Online Multi-User School Result System</div><div class="year">Academic Year ${YEAR}</div><div class="field"><label>Email address</label><input id="email" type="email"></div><div class="field"><label>Password</label><input id="password" type="password"></div><button id="signBtn" class="primary full" onclick="signIn()">Sign in</button><button class="ghost full" style="margin-top:8px;width:100%" onclick="resetPassword()">Forgot password?</button><div id="loginErr" class="err"></div></div></div>`}
+function shellHTML(){return `<div class="app"><aside class="side"><div class="brand">JNV Result</div><div class="school-mini">${esc(schoolName())}<br>Academic Year ${YEAR}</div><div class="nav">
+${nav("dashboard","Dashboard","▣")}${nav("students","Students","●")}${nav("classes","Classes & Sections","◆")}${nav("subjects","Subjects","◇")}${nav("exams","Examinations","▤")}${nav("marks","Marks Entry","✎")}${nav("attendance","Attendance","✓")}${nav("coscholastic","Co-Scholastic","◆")}${nav("results","Results & Analytics","★")}${nav("reports","Report Cards","▧")}${isAdmin()?nav("teachers","Teachers","♟"):""}${isAdmin()?nav("assign","Assignments","⇄"):""}${isAdmin()?nav("settings","School & Branding","⚙"):""}<button onclick="signOut()">⇥ Sign out</button>
+</div></aside><main class="main"><div class="top"><div><h2 id="pageTitle">Dashboard</h2><div style="color:var(--muted);font-size:13px">${esc(schoolName())}</div></div><div class="role">${esc(state.profile?.designation||state.profile?.role||"teacher")} · ${esc(state.profile?.full_name||"")}</div></div><div id="content"></div></main></div><div id="modal"></div><div id="toast" class="hidden" style="position:fixed;right:18px;bottom:18px;color:#fff;padding:12px 16px;border-radius:10px;z-index:50;font-weight:750"></div>`}
+
 async function init(){
- if(!window.supabase?.createClient){document.body.innerHTML='<div class="card" style="margin:30px">Supabase library failed to load. Check internet/CDN access.</div>';return}
- S.sb=supabase.createClient(CONFIG.SUPABASE_URL,CONFIG.SUPABASE_ANON_KEY);
- const {data:{session}}=await S.sb.auth.getSession();
- if(!session){login();return}
- S.user=session.user;await loadProfile();shell();await go("dashboard");
- S.sb.auth.onAuthStateChange((_e,s)=>{if(!s)location.reload()});
-}
-async function loadProfile(){
- const r=await S.sb.from("profiles").select("*").eq("id",S.user.id).maybeSingle();
- S.profile=r.data||{id:S.user.id,full_name:S.user.email,role:"teacher",active:true};
+ state.sb=supabase.createClient(CONFIG.SUPABASE_URL,CONFIG.SUPABASE_ANON_KEY);
+ const {data:{session}}=await state.sb.auth.getSession();
+ if(!session){document.body.innerHTML=loginHTML();return}
+ state.user=session.user;await loadProfile();await loadSettings();renderShell();await go("dashboard");
+ state.sb.auth.onAuthStateChange((_e,s)=>{state.user=s?.user||null;if(!s)location.reload()});
 }
 async function signIn(){
- const err=$("loginErr"),btn=$("loginBtn");err.textContent="";btn.disabled=true;
- try{const email=$("email").value.trim().toLowerCase(),password=$("password").value;
- if(!email||!password)throw new Error("Enter email and password.");
- const r=await S.sb.auth.signInWithPassword({email,password});if(r.error)throw r.error;
- S.user=r.data.user;await loadProfile();shell();await go("dashboard");
- }catch(e){err.textContent=e.message||String(e)}finally{btn.disabled=false}
+ const err=$("loginErr"),btn=$("signBtn");err.textContent="";
+ const email=$("email").value.trim(),password=$("password").value;
+ if(!email||!password){err.textContent="Please enter both email and password.";return}
+ btn.disabled=true;btn.textContent="Signing in…";
+ try{const {data,error}=await state.sb.auth.signInWithPassword({email,password});if(error)throw error;state.user=data.user;await loadProfile();await loadSettings();renderShell();await go("dashboard")}
+ catch(e){err.textContent="Sign-in error: "+(e?.message||e)}
+ finally{btn.disabled=false;btn.textContent="Sign in"}
 }
-async function resetPassword(){
- const email=$("email").value.trim();if(!email){$("loginErr").textContent="Enter email first.";return}
- const r=await S.sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin});
- $("loginErr").textContent=r.error?r.error.message:"Password reset email sent.";
-}
-async function signOut(){await S.sb.auth.signOut();location.reload()}
-function modal(title,body){$("modal").innerHTML=`<div class="modal" onclick="if(event.target===this)closeModal()"><div class="modal-box"><div class="modal-head"><h3>${title}</h3><button class="close" onclick="closeModal()">×</button></div>${body}</div></div>`}
-function closeModal(){$("modal").innerHTML=""}
-function pageTitle(p){return ({coscholastic:"Co-Scholastic Grades",reportcards:"Report Cards",results:"Results & Analytics",marks:"Marks Entry",exams:"Examinations"})[p]||p[0].toUpperCase()+p.slice(1)}
-async function lookups(){
- const [a,b,c,d,e,f,g]=await Promise.all([
-  S.sb.from("classes").select("*").order("display_order"),
-  S.sb.from("sections").select("*").order("name"),
-  S.sb.from("students").select("*").order("roll_no"),
-  S.sb.from("subjects").select("*").order("name"),
-  S.sb.from("examinations").select("*").order("exam_date",{ascending:false}),
-  S.sb.from("teachers").select("*").order("full_name"),
-  S.sb.from("teacher_subjects").select("*")
- ]);
- for(const r of[a,b,c,d,e,f,g])if(r.error)throw r.error;
- S.classes=a.data||[];S.sections=b.data||[];S.students=c.data||[];S.subjects=d.data||[];S.exams=e.data||[];S.teachers=f.data||[];S.assignments=g.data||[];
-}
-async function go(p){
- S.page=p;shell();$("title").textContent=pageTitle(p);$("content").innerHTML='<div class="card">Loading…</div>';
+async function resetPassword(){const email=$("email").value.trim(),err=$("loginErr");if(!email){err.textContent="Enter email first.";return}const {error}=await state.sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin});err.textContent=error?"Reset error: "+error.message:"Password reset email sent."}
+async function signOut(){await state.sb.auth.signOut();location.reload()}
+async function loadProfile(){const r=await state.sb.from("profiles").select("*").eq("id",state.user.id).maybeSingle();state.profile=r.data||{role:"teacher",full_name:state.user.email}}
+async function loadSettings(){try{const r=await state.sb.from("school_settings").select("*").limit(1).maybeSingle();if(r.data)state.settings={...state.settings,...r.data}}catch(e){}}
+function renderShell(){document.body.innerHTML=shellHTML()}
+async function go(page){
+ state.page=page;renderShell();$("content").innerHTML='<div class="card">Loading…</div>';
+ const titles={dashboard:"Dashboard",students:"Students",classes:"Classes & Sections",subjects:"Subjects",exams:"Examinations",marks:"Marks Entry",attendance:"Attendance",coscholastic:"Co-Scholastic Grades",results:"Results & Analytics",reports:"Report Cards",teachers:"Teachers",assign:"Teacher Assignments",settings:"School & Branding"};
+ $("pageTitle").textContent=titles[page]||"JNV Result";
  try{
-  if(p==="dashboard")await dashboard();
-  else if(p==="students")await students();
-  else if(p==="classes")await classes();
-  else if(p==="subjects")await subjects();
-  else if(p==="teachers")await teachers();
-  else if(p==="exams")await exams();
-  else if(p==="marks")await marks();
-  else if(p==="coscholastic")await coScholastic();
-  else if(p==="attendance")await attendance();
-  else if(p==="results")await results();
-  else if(p==="reportcards")await reports();
- }catch(e){console.error(e);$("content").innerHTML=`<div class="card"><b>Module error</b><div class="err">${esc(e.message||e)}</div></div>`}
+  if(page==="dashboard")await dashboard();else if(page==="students")await students();else if(page==="classes")await classes();else if(page==="subjects")await subjects();else if(page==="exams")await exams();else if(page==="marks")await marks();else if(page==="attendance")await attendance();else if(page==="coscholastic")await coscholastic();else if(page==="results")await results();else if(page==="reports")await reports();else if(page==="teachers")await teachers();else if(page==="assign")await assignments();else if(page==="settings")await settingsPage();
+ }catch(e){$("content").innerHTML=`<div class="card"><b>Module error</b><div class="err">${esc(e.message||e)}</div></div>`}
 }
-function tbl(head,rows){
- return `<div class="table-wrap"><table class="table"><thead><tr>${head.map(x=>`<th>${x}</th>`).join("")}</tr></thead><tbody>${rows||'<tr><td colspan="99" style="text-align:center;padding:25px;color:#68756e">No records.</td></tr>'}</tbody></table></div>`
-}
-
-function downloadTemplate(filename,headers,sample=[]){const ws=XLSX.utils.aoa_to_sheet([headers,...sample]);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Template");XLSX.writeFile(wb,filename)}
-async function bulkUpload(table,label,file,input){if(!file)return;try{const data=await file.arrayBuffer();const wb=XLSX.read(new Uint8Array(data),{type:"array"});const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:""});if(!rows.length)throw Error("No rows found");const cfg={students:["admission_no","roll_no","full_name","gender","class_id","section_id","house","apar_id","date_of_birth","father_name","mother_name","parent_phone","address","active"],classes:["name","display_order","active"],sections:["class_id","name","active"],subjects:["name","subject_name","code","class_id","active"],teachers:["full_name","email","phone","employee_id","active"],examinations:["name","exam_name","title","exam_date","class_id","max_marks","active"]};const allowed=cfg[table]||[];const norm=x=>String(x??"").trim().toLowerCase().replace(/[\s-]+/g,"_");const payload=rows.map(r=>{const o={};for(const k in r){const nk=norm(k);if(allowed.includes(nk)&&r[k]!=="")o[nk]=typeof r[k]==="string"?r[k].trim():r[k]}if("active"in o)o.active=!['false','no','0'].includes(String(o.active).toLowerCase());if("display_order"in o)o.display_order=Number(o.display_order||0);if("max_marks"in o)o.max_marks=Number(o.max_marks||0);return o}).filter(o=>Object.keys(o).length);if(!payload.length)throw Error("No usable columns. Download the Template first.");if(!confirm(`Upload ${payload.length} ${label} record(s)?`))return;const r=table==="students"?await S.sb.from(table).upsert(payload,{onConflict:"admission_no"}):await S.sb.from(table).insert(payload);if(r.error)throw r.error;toast(`${payload.length} ${label} record(s) uploaded`);input.value="";go(S.page)}catch(e){toast(e.message||String(e),false);input.value=""}}
-function bulkControls(table,label,headers,sample=[]){return `<button class="secondary" onclick='downloadTemplate(${JSON.stringify(label+"_Template.xlsx")},${JSON.stringify(headers)},${JSON.stringify(sample)})'>Template</button><label class="secondary" style="cursor:pointer">Bulk Upload <input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="bulkUpload('${table}','${label}',this.files[0],this)"></label>`}
-function editSimple(table,id,label,fields){
- const x=(S[table]||[]).find(a=>a.id===id)||{};
- const b=fields.map(([k,l,t])=>{
-   const v=x[k];
-   if(t==="boolean") return `<div class="field"><label>${l}</label><select id="ee_${k}"><option value="true" ${v!==false?"selected":""}>Yes</option><option value="false" ${v===false?"selected":""}>No</option></select></div>`;
-   return `<div class="field"><label>${l}</label><input id="ee_${k}" type="${t||"text"}" value="${esc(v)}"></div>`;
- }).join("");
- modal("Edit "+label,`<div class="notice">You are editing this record. Tap <b>Save Changes</b> to update Supabase.</div><div class="form-grid">${b}</div><button id="saveEditBtn" class="primary full" onclick="saveSimple('${table}','${id}','${label}',${JSON.stringify(fields.map(f=>f[0]))})">Save Changes</button>`);
-}
-
-async function saveSimple(table,id,label,keys){
- const btn=$("saveEditBtn"); if(btn)btn.disabled=true;
- try{
-   const o={};
-   for(const k of keys){
-     const el=$("ee_"+k); if(!el)continue;
-     if(el.tagName==="SELECT" && (el.value==="true"||el.value==="false")) o[k]=el.value==="true";
-     else o[k]=el.value.trim();
-   }
-   if("display_order" in o)o.display_order=Number(o.display_order||0);
-   if("max_marks" in o)o.max_marks=Number(o.max_marks||0);
-   const r=await S.sb.from(table).update(o).eq("id",id).select("id");
-   if(r.error) throw r.error;
-   if(!r.data || !r.data.length) throw new Error("Update was not allowed. Please check the Supabase UPDATE policy for this table.");
-   closeModal();toast(label+" updated successfully");await go(S.page);
- }catch(e){
-   toast("Edit failed: "+(e.message||e),false);
-   if(btn)btn.disabled=false;
- }
-}
-
-async function deleteSimple(table,id,label){
- if(!confirm("Delete this "+label+" permanently?"))return;
- try{
-   const r=await S.sb.from(table).delete().eq("id",id).select("id");
-   if(r.error)throw r.error;
-   if(!r.data || !r.data.length)throw new Error("Delete was not allowed. Please check the Supabase DELETE policy for this table.");
-   toast(label+" deleted successfully");await go(S.page);
- }catch(e){
-   const msg=String(e.message||e);
-   if(/foreign key|violates|constraint/i.test(msg)){
-     toast("Cannot delete: this record is used by other records.",false);
-   }else{
-     toast("Delete failed: "+msg,false);
-   }
- }
-}
-
-async function delRow(table,id,label){ return deleteSimple(table,id,label); }
-
+async function count(table){const r=await state.sb.from(table).select("*",{count:"exact",head:true});if(r.error)throw r.error;return r.count||0}
 async function dashboard(){
- const vals=await Promise.all(["students","classes","subjects","examinations"].map(async t=>{const r=await S.sb.from(t).select("*",{count:"exact",head:true});return r.count||0}));
- $("content").innerHTML=`<div class="grid">${[["Students",vals[0]],["Classes",vals[1]],["Subjects",vals[2]],["Examinations",vals[3]]].map(x=>`<div class="card kpi"><div class="label">${x[0]}</div><div class="num">${x[1]}</div></div>`).join("")}</div>
- <div class="section-title"><h3>JNV Result Automation</h3></div>
- <div class="notice"><b>CRUD controls fixed.</b> Edit and Delete now verify the Supabase response and show the exact error if a database policy or relationship blocks the action.</div><div class="notice"><b>Bulk Upload + Edit + Delete are available</b> in Students, Classes/Sections, Subjects, Teachers and Examinations. Use the Template button in each section.</div><div class="notice"><b>Co-Scholastic grades are annual.</b> Enter them once for each student for ${YEAR}; they automatically appear on the student's report card.</div>`
+ const vals=await Promise.all(["students","classes","subjects","examinations"].map(count));
+ $("content").innerHTML=`<div class="grid">${["Students","Classes","Subjects","Examinations"].map((x,i)=>`<div class="card kpi"><div class="label">${x}</div><div class="num">${vals[i]}</div></div>`).join("")}</div>
+ <div class="section-title"><h3>Quick actions</h3></div><div class="quick">
+ <div class="card"><h3>Students</h3><p>Individual entry, edit, delete and CSV bulk upload.</p><button class="secondary" onclick="go('students')">Open Students</button></div>
+ <div class="card"><h3>Marks Entry</h3><p>Exam, class, section and subject-wise marks entry.</p><button class="secondary" onclick="go('marks')">Enter Marks</button></div>
+ <div class="card"><h3>Attendance</h3><p>Daily attendance with term totals and percentage.</p><button class="secondary" onclick="go('attendance')">Open Attendance</button></div>
+ <div class="card"><h3>Report Cards</h3><p>JNV-style report card with logos, student photo and signatures.</p><button class="secondary" onclick="go('reports')">Open Report Cards</button></div></div>
+ <div class="section-title"><h3>Workflow</h3></div><div class="notice">Admin: Classes → Sections → Subjects → Students → Teachers → Assignments → Examinations → Marks → Attendance → Co-Scholastic → Results → Report Cards.</div>`;
 }
-async function students(){await lookups();renderStudents(S.students)}
-function renderStudents(arr){
- $("content").innerHTML=`<div class="toolbar"><input class="search" id="studentSearch" placeholder="Search student / roll / admission" oninput="filterStudents()">
- <button class="primary" onclick="studentForm()">+ Add Student</button>${bulkControls("students","Student",["admission_no","roll_no","full_name","gender","class_id","section_id","house","apar_id","date_of_birth","father_name","mother_name","parent_phone","address","active"],[["1","1","Sample Student","Male","","","Aravali","","","","","","",true]])}</div>${tbl(["Roll","Admission","Name","Class","Section","House","Action"],arr.map(x=>`<tr><td>${esc(x.roll_no)}</td><td>${esc(x.admission_no)}</td><td><b>${esc(x.full_name)}</b></td><td>${C(x.class_id)}</td><td>${SEC(x.section_id)}</td><td>${esc(x.house)}</td>
- <td class="actions"><button class="secondary" onclick="studentForm('${x.id}')">Edit</button><button class="danger" onclick="delRow('students','${x.id}','Student')">Delete</button></td></tr>`).join(""))}`
+async function loadLookups(){
+ const [c,s,st,sub,e,t,a]=await Promise.all([
+  state.sb.from("classes").select("*").order("display_order",{ascending:true}),
+  state.sb.from("sections").select("*").order("name"),
+  state.sb.from("students").select("*").order("roll_no"),
+  state.sb.from("subjects").select("*").order("name"),
+  state.sb.from("examinations").select("*").order("exam_date",{ascending:false}),
+  state.sb.from("profiles").select("*").order("full_name"),
+  state.sb.from("teacher_subjects").select("*")
+ ]);
+ if(c.error)throw c.error;if(s.error)throw s.error;if(st.error)throw st.error;if(sub.error)throw sub.error;if(e.error)throw e.error;
+ state.classes=c.data||[];state.sections=s.data||[];state.students=st.data||[];state.subjects=sub.data||[];state.exams=e.data||[];state.teachers=t.data||[];state.assignments=a.data||[];
 }
-function filterStudents(){const q=$("studentSearch").value.toLowerCase();renderStudents(S.students.filter(x=>(x.full_name+" "+x.roll_no+" "+x.admission_no).toLowerCase().includes(q)))}
-function studentForm(id){
- const x=S.students.find(a=>a.id===id)||{};
- modal(id?"Edit Student":"Add Student",`<div class="form-grid">
- <div class="field"><label>Admission No</label><input id="ad" value="${esc(x.admission_no)}"></div>
- <div class="field"><label>Roll No</label><input id="ro" value="${esc(x.roll_no)}"></div>
- <div class="field wide"><label>Full Name</label><input id="nm" value="${esc(x.full_name)}"></div>
- <div class="field"><label>Gender</label><select id="ge"><option>Male</option><option ${x.gender==="Female"?"selected":""}>Female</option><option ${x.gender==="Other"?"selected":""}>Other</option></select></div>
- <div class="field"><label>Class</label><select id="cl">${S.classes.map(c=>`<option value="${c.id}" ${x.class_id===c.id?"selected":""}>${esc(c.name)}</option>`).join("")}</select></div>
- <div class="field"><label>Section</label><select id="se">${S.sections.map(c=>`<option value="${c.id}" ${x.section_id===c.id?"selected":""}>${C(c.class_id)} - ${esc(c.name)}</option>`).join("")}</select></div>
- <div class="field"><label>House</label><input id="ho" value="${esc(x.house)}"></div><div class="field"><label>APAR ID</label><input id="apar" value="${esc(x.apar_id)}"></div><div class="field"><label>Date of Birth</label><input id="dob" type="date" value="${esc(x.date_of_birth)}"></div><div class="field"><label>Father Name</label><input id="fa" value="${esc(x.father_name)}"></div>
- <div class="field"><label>Mother Name</label><input id="mo" value="${esc(x.mother_name)}"></div><div class="field"><label>Parent Phone</label><input id="ph" value="${esc(x.parent_phone||x.phone)}"></div>
- <div class="field wide"><label>Address</label><textarea id="addr">${esc(x.address||"")}</textarea></div>
-  <div class="field wide"><label>Student Photo</label><input id="studentPhotoFile" type="file" accept="image/png,image/jpeg,image/webp" onchange="saveStudentPhoto('${id}',this.files[0])"><div class="mini">Upload passport-size photo. It will appear on the report card.</div>${id&&getStudentPhoto(id)?`<img class="branding-preview" src="${getStudentPhoto(id)}">`:""}</div></div>
- <button class="primary full" onclick="saveStudent('${id||""}')">Save Student</button>`)
+function className(id){return state.classes.find(x=>x.id===id)?.name||id||""}
+function sectionName(id){return state.sections.find(x=>x.id===id)?.name||id||""}
+function subjectName(id){return state.subjects.find(x=>x.id===id)?.name||id||""}
+function teacherName(id){return state.teachers.find(x=>x.id===id)?.full_name||id||""}
+function sectionsFor(classId){return state.sections.filter(s=>s.class_id===classId&&s.active!==false)}
+
+async function students(){
+ await loadLookups();
+ $("content").innerHTML=`<div class="toolbar"><input id="studentSearch" placeholder="Search name / roll / admission" oninput="filterStudents()">${isAdmin()?'<button class="primary" onclick="studentModal()">+ Add Student</button><button class="secondary" onclick="importStudentsModal()">⇧ Bulk Upload</button><button class="ghost" onclick="downloadStudentTemplate()">⇩ Template</button>':""}</div><div id="studentTable"></div>`;
+ renderStudentTable();
 }
+function filterStudents(){renderStudentTable(($("studentSearch")?.value||"").toLowerCase())}
+function renderStudentTable(q=""){
+ const d=state.students.filter(s=>!q||[s.full_name,s.roll_no,s.admission_no,s.apaar_id,className(s.class_id),sectionName(s.section_id)].some(x=>String(x||"").toLowerCase().includes(q)));
+ $("studentTable").innerHTML=d.length?`<div class="table-wrap"><table class="table"><thead><tr><th>Photo</th><th>Roll</th><th>Admission</th><th>Name</th><th>Class</th><th>Section</th><th>APAAR ID</th><th>House</th><th>Action</th></tr></thead><tbody>${d.map(s=>`<tr><td>${s.photo_url?`<img class="photo-thumb" src="${esc(s.photo_url)}">`:"—"}</td><td>${esc(s.roll_no)}</td><td>${esc(s.admission_no)}</td><td>${esc(s.full_name)}</td><td>${esc(className(s.class_id))}</td><td>${esc(sectionName(s.section_id))}</td><td>${esc(s.apaar_id)}</td><td>${esc(s.house)}</td><td class="actions">${isAdmin()?`<button class="secondary" onclick="studentModal('${s.id}')">Edit</button><button class="danger" onclick="deleteStudent('${s.id}')">Delete</button>`:""}</td></tr>`).join("")}</tbody></table></div>`:'<div class="card empty">No students found.</div>';
+}
+function studentModal(id=""){
+ const s=state.students.find(x=>x.id===id)||{};
+ $("modal").innerHTML=`<div class="modal"><div class="modal-box"><div class="modal-head"><h3>${id?"Edit":"Add"} Student</h3><button class="close" onclick="closeModal()">×</button></div>
+ <div class="form-grid"><div class="field"><label>Admission No *</label><input id="s_adm" value="${esc(s.admission_no)}"></div><div class="field"><label>Roll No *</label><input id="s_roll" value="${esc(s.roll_no)}"></div><div class="field full"><label>Full Name *</label><input id="s_name" value="${esc(s.full_name)}"></div>
+ <div class="field"><label>Gender</label><select id="s_gender"><option value="">Select</option><option ${s.gender==="Male"?"selected":""}>Male</option><option ${s.gender==="Female"?"selected":""}>Female</option></select></div><div class="field"><label>Date of Birth</label><input id="s_dob" type="date" value="${esc(s.dob)}"></div>
+ <div class="field"><label>Class *</label><select id="s_class" onchange="studentSectionOptions()">${state.classes.map(x=>`<option value="${x.id}" ${s.class_id===x.id?"selected":""}>${esc(x.name)}</option>`).join("")}</select></div><div class="field"><label>Section *</label><select id="s_section">${sectionsFor(s.class_id||state.classes[0]?.id).map(x=>`<option value="${x.id}" ${s.section_id===x.id?"selected":""}>${esc(x.name)}</option>`).join("")}</select></div>
+ <div class="field"><label>APAAR ID</label><input id="s_apaar" value="${esc(s.apaar_id)}"></div><div class="field"><label>House</label><input id="s_house" value="${esc(s.house)}"></div><div class="field"><label>Father Name</label><input id="s_father" value="${esc(s.father_name)}"></div><div class="field"><label>Mother Name</label><input id="s_mother" value="${esc(s.mother_name)}"></div>
+ <div class="field full"><label>Student Photo URL</label><input id="s_photo" placeholder="Paste image URL or Supabase Storage public URL" value="${esc(s.photo_url)}"></div></div>
+ <button class="primary full" onclick="saveStudent('${id}')">Save Student</button></div></div>`;
+}
+function studentSectionOptions(){const cid=$("s_class").value,old=$("s_section").value;$("s_section").innerHTML=sectionsFor(cid).map(x=>`<option value="${x.id}" ${old===x.id?"selected":""}>${esc(x.name)}</option>`).join("")}
 async function saveStudent(id){
- const o={admission_no:$("ad").value.trim(),roll_no:$("ro").value.trim(),full_name:$("nm").value.trim(),gender:$("ge").value,class_id:$("cl").value,section_id:$("se").value,house:$("ho").value,apar_id:$("apar").value.trim(),date_of_birth:$("dob").value||null,father_name:$("fa").value,mother_name:$("mo").value,parent_phone:$("ph").value,address:$("addr").value,active:true};
- const r=id?await S.sb.from("students").update(o).eq("id",id):await S.sb.from("students").insert(o);
- if(r.error)return toast(r.error.message,false);closeModal();toast("Student saved");students();
+ const x={admission_no:$("s_adm").value.trim(),roll_no:$("s_roll").value.trim(),full_name:$("s_name").value.trim(),gender:$("s_gender").value||null,dob:$("s_dob").value||null,class_id:$("s_class").value||null,section_id:$("s_section").value||null,apaar_id:$("s_apaar").value.trim()||null,house:$("s_house").value.trim()||null,father_name:$("s_father").value.trim()||null,mother_name:$("s_mother").value.trim()||null,photo_url:$("s_photo").value.trim()||null};
+ if(!x.admission_no||!x.roll_no||!x.full_name){toast("Admission No, Roll No and Name are required",false);return}
+ const r=id?await state.sb.from("students").update(x).eq("id",id):await state.sb.from("students").insert(x);
+ if(r.error){toast(r.error.message,false);return}closeModal();toast(id?"Student updated":"Student saved");students();
 }
-async function classes(){await lookups();$("content").innerHTML=`<div class="section-title"><h3>Classes</h3><div class="actions">${bulkControls("classes","Class",["name","display_order","active"],[["VI",6,true]])}</div></div>${tbl(["Class","Order","Active","Action"],S.classes.map(x=>`<tr><td>${esc(x.name)}</td><td>${x.display_order??""}</td><td>${x.active===false?"No":"Yes"}</td><td class="actions"><button class="secondary" onclick="editSimple('classes','${x.id}','Class',[["name","Class Name"],["display_order","Display Order","number"],["active","Active"]])">Edit</button><button class="danger" onclick="deleteSimple('classes','${x.id}','Class')">Delete</button></td></tr>`).join(""))}<div class="section-title"><h3>Sections</h3><div class="actions">${bulkControls("sections","Section",["class_id","name","active"],[["CLASS_ID","A",true]])}</div></div>${tbl(["Class","Section","Active","Action"],S.sections.map(x=>`<tr><td>${C(x.class_id)}</td><td>${esc(x.name)}</td><td>${x.active===false?"No":"Yes"}</td><td class="actions"><button class="secondary" onclick="editSectionForm('${x.id}')">Edit</button><button class="danger" onclick="deleteSimple('sections','${x.id}','Section')">Delete</button></td></tr>`).join(""))}`}
-
-async function subjects(){await lookups();$("content").innerHTML=`<div class="section-title"><h3>Subjects</h3><div class="actions">${bulkControls("subjects","Subject",["name","subject_name","code","class_id","active"],[["Physics","","PHY","",true]])}</div></div>${tbl(["Subject","Code","Class","Active","Action"],S.subjects.map(x=>`<tr><td>${esc(x.name||x.subject_name)}</td><td>${esc(x.code)}</td><td>${C(x.class_id)||"All"}</td><td>${x.active===false?"No":"Yes"}</td><td class="actions"><button class="secondary" onclick="editSimple('subjects','${x.id}','Subject',[["name","Subject Name"],["code","Code"]])">Edit</button><button class="danger" onclick="deleteSimple('subjects','${x.id}','Subject')">Delete</button></td></tr>`).join(""))}`}
-
-async function teachers(){await lookups();$("content").innerHTML=`<div class="section-title"><h3>Teachers</h3><div class="actions">${bulkControls("teachers","Teacher",["full_name","email","phone","employee_id","active"],[["Sample Teacher","teacher@example.com","9999999999","EMP001",true]])}</div></div>${tbl(["Teacher","Email","Phone","Employee ID","Active","Action"],S.teachers.map(x=>`<tr><td>${esc(x.full_name)}</td><td>${esc(x.email)}</td><td>${esc(x.phone)}</td><td>${esc(x.employee_id)}</td><td>${x.active===false?"No":"Yes"}</td><td class="actions"><button class="secondary" onclick="editSimple('teachers','${x.id}','Teacher',[["full_name","Full Name"],["email","Email"],["phone","Phone"],["employee_id","Employee ID"]])">Edit</button><button class="danger" onclick="deleteSimple('teachers','${x.id}','Teacher')">Delete</button></td></tr>`).join(""))}`}
-
-async function exams(){await lookups();$("content").innerHTML=`<div class="section-title"><h3>Examinations</h3><div class="actions">${bulkControls("examinations","Examination",["name","exam_name","title","exam_date","class_id","max_marks","active"],[["Periodic Test 1","","","2026-07-01","",40,true]])}</div></div><div class="notice"><b>Dynamic examinations.</b> Use Bulk Upload to add many examinations.</div>${tbl(["Examination","Date","Class","Max Marks","Active","Action"],S.exams.map(x=>`<tr><td>${esc(x.name||x.exam_name||x.title)}</td><td>${esc(x.exam_date)}</td><td>${C(x.class_id)||"All"}</td><td>${esc(x.max_marks||"")}</td><td>${x.active===false?"No":"Yes"}</td><td class="actions"><button class="secondary" onclick="editSimple('examinations','${x.id}','Examination',[["name","Name"],["exam_date","Date","date"],["max_marks","Maximum Marks","number"]])">Edit</button><button class="danger" onclick="deleteSimple('examinations','${x.id}','Examination')">Delete</button></td></tr>`).join(""))}`}
-
-async function marks(){
- await lookups();
- $("content").innerHTML=`<div class="notice">Use your existing examination/marks-entry workflow here. This replacement keeps the database-driven classes, subjects and examinations available and adds the annual Co-Scholastic module and JNV-style report card.</div>`
-}
-async function attendance(){
- $("content").innerHTML=`<div class="card"><h3>Attendance</h3><p class="mini">Attendance fields can be added to the report card when your attendance table is connected.</p></div>`
-}
-async function results(){
- await lookups();$("content").innerHTML=`<div class="notice"><b>Results & Analytics</b><br>Choose a student in Report Cards to generate the JNV-style report. Subject rows are generated dynamically from the Subjects table.</div>`
-}
-
-/* =========================
-   ANNUAL CO-SCHOLASTIC
-   ========================= */
-const CO_FIELDS=[
- ["work_education","Work Education"],
- ["art_education","Art Education"],
- ["health_physical_education","Health & Physical Education"],
- ["discipline","Discipline"],
- ["cca","Co-Curricular Activities (CCA)"],
- ["yoga","Yoga"],
- ["sports","Sports"],
- ["health_status","Health Status"]
-];
-const VALID_CO=["A","B","C","D","E"];
-async function loadCO(){
- const r=await S.sb.from("co_scholastic").select("*").eq("academic_year",YEAR);
- if(r.error)throw r.error;S.co=r.data||[];return S.co;
-}
-async function coScholastic(){
- await lookups();await loadCO();
- const cls=S.selectedClass||S.classes[0]?.id||"";
- S.selectedClass=cls;
- renderCO();
-}
-function renderCO(){
- const filtered=S.students.filter(x=>!S.selectedClass||x.class_id===S.selectedClass);
- $("content").innerHTML=`<div class="toolbar">
- <div style="min-width:180px"><label class="mini">Class</label><select id="coClass" onchange="S.selectedClass=this.value;renderCO()">${S.classes.map(c=>`<option value="${c.id}" ${c.id===S.selectedClass?"selected":""}>${esc(c.name)}</option>`).join("")}</select></div>
- <div style="min-width:160px"><label class="mini">Section</label><select id="coSection" onchange="renderCO()"><option value="">All Sections</option>${S.sections.filter(x=>!S.selectedClass||x.class_id===S.selectedClass).map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join("")}</select></div>
- <input class="search" id="coSearch" placeholder="Search student" oninput="renderCO()">
- <button class="secondary" onclick='downloadTemplate("Co_Scholastic_Template.xlsx",["student_id","academic_year","work_education","art_education","health_physical_education","discipline","cca","yoga","sports","health_status"],[["STUDENT_ID","2026-27","A","A","A","A","A","A","A","A"]])'>Template</button><span class="badge">${YEAR} • Annual Entry</span></div>
- <div class="notice"><b>Enter Co-Scholastic grades only once per academic year.</b><br>
- The same grades will be automatically shown on the student's report card. Grades allowed: A, B, C, D, E.</div>
- <div class="section-title"><h3>Student Co-Scholastic Records</h3></div>
- ${tbl(["Roll","Admission","Student","Section","Status","Action"],filtered.filter(x=>{const sec=$("coSection")?.value||"";const q=($("coSearch")?.value||"").toLowerCase();return(!sec||x.section_id===sec)&&(!q||(x.full_name+" "+x.admission_no+" "+x.roll_no).toLowerCase().includes(q))}).map(x=>{
- const rec=S.co.find(c=>c.student_id===x.id);
- return `<tr><td>${esc(x.roll_no)}</td><td>${esc(x.admission_no)}</td><td><b>${esc(x.full_name)}</b></td><td>${SEC(x.section_id)}</td>
- <td>${rec?'<span class="badge">Entered</span>':'<span class="badge warn">Pending</span>'}</td>
- <td class="actions"><button class="primary" onclick="coForm('${x.id}')">${rec?"Edit Grades":"Enter Grades"}</button>${rec?`<button class="danger" onclick="deleteSimple('co_scholastic','${rec.id}','Co-Scholastic record')">Delete</button>`:""}</td></tr>`
- }).join(""))}`;
-}
-function coForm(studentId){
- const st=S.students.find(x=>x.id===studentId);const rec=S.co.find(x=>x.student_id===studentId)||{};
- const inputs=CO_FIELDS.map(([k,l])=>`<div class="field"><label>${l}</label><select id="co_${k}" class="grade-input"><option value="">Select</option>${VALID_CO.map(g=>`<option value="${g}" ${String(rec[k]||"").toUpperCase()===g?"selected":""}>${g}</option>`).join("")}</select></div>`).join("");
- modal("Annual Co-Scholastic Grades",`<div class="notice"><b>${esc(st?.full_name)}</b> · Class ${esc(C(st?.class_id))} · Section ${esc(SEC(st?.section_id))}<br>Academic Year: <b>${YEAR}</b><br><span class="mini">This record is saved once for the whole academic year.</span></div>
- <div class="cs-grid">${inputs}</div><button class="primary full" onclick="saveCO('${studentId}')">Save Co-Scholastic Grades</button>`)
-}
-async function saveCO(studentId){
- const o={student_id:studentId,academic_year:YEAR};
- for(const [k] of CO_FIELDS){o[k]=$("co_"+k).value.trim().toUpperCase()||null}
- const existing=S.co.find(x=>x.student_id===studentId&&x.academic_year===YEAR);
- let r;
- if(existing)r=await S.sb.from("co_scholastic").update(o).eq("id",existing.id);
- else r=await S.sb.from("co_scholastic").insert(o);
- if(r.error){
-   if(String(r.error.message).toLowerCase().includes("unique"))return toast("A Co-Scholastic record already exists for this student and academic year. Use Edit Grades.",false);
-   return toast(r.error.message,false);
- }
- closeModal();toast("Co-Scholastic grades saved");await loadCO();renderCO();
-}
-
-/* =========================
-   REPORT CARD
-   ========================= */
-async function reports(){
- await lookups();
- const students=S.students;
- $("content").innerHTML=`<div class="toolbar">
- <select id="rpClass" onchange="loadReportStudents()"><option value="">All Classes</option>${S.classes.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join("")}</select>
- <select id="rpStudent"><option value="">Select Student</option>${students.map(x=>`<option value="${x.id}">${esc(x.roll_no)} - ${esc(x.full_name)}</option>`).join("")}</select>
- <button class="primary" onclick="showReport()">View Report Card</button><button class="secondary" onclick="brandingForm()">⚙ Upload Logos / VP Signature</button>
- </div>
- <div class="notice">The report card follows the supplied JNV sample structure: Part A Scholastic, Part B Co-Scholastic, Part C Bagless Days, Part D Discipline, Part E General Studies, Part F Outstanding Achievement and Part G Attendance.</div>
- <div id="reportArea" style="margin-top:15px"></div>`
-}
-function loadReportStudents(){
- const c=$("rpClass").value;const list=S.students.filter(x=>!c||x.class_id===c);
- $("rpStudent").innerHTML='<option value="">Select Student</option>'+list.map(x=>`<option value="${x.id}">${esc(x.roll_no)} - ${esc(x.full_name)}</option>`).join("");
-}
-async function getStudentCO(studentId){
- const r=await S.sb.from("co_scholastic").select("*").eq("student_id",studentId).eq("academic_year",YEAR).maybeSingle();
- if(r.error)throw r.error;return r.data||{};
-}
-async function getMarksForStudent(studentId){
- /* Supports the most common table/column names used by the existing app.
-    If your marks table has a different name, the report still prints the
-    student and co-scholastic sections; marks can remain in the existing
-    marks screen. */
- const candidates=[
-   {table:"marks",student:"student_id",exam:"examination_id",subject:"subject_id",mark:"marks"},
-   {table:"marks",student:"student_id",exam:"examination_id",subject:"subject_id",mark:"marks_obtained"},
-   {table:"student_marks",student:"student_id",exam:"examination_id",subject:"subject_id",mark:"marks"},
-   {table:"student_marks",student:"student_id",exam:"examination_id",subject:"subject_id",mark:"marks_obtained"}
- ];
- for(const q of candidates){
-   const r=await S.sb.from(q.table).select("*").eq(q.student,studentId);
-   if(!r.error&&Array.isArray(r.data))return r.data;
- }
- return [];
-}
-function gradeFromPercent(p){
- if(p>=91)return"A1";if(p>=81)return"A2";if(p>=71)return"B1";if(p>=61)return"B2";if(p>=51)return"C1";if(p>=41)return"C2";if(p>=33)return"D";return"E";
-}
-function coRows(co){
- return CO_FIELDS.map(([k,l])=>`<tr><td>${esc(l)}</td><td style="text-align:center;font-weight:800">${esc(co[k]||"—")}</td></tr>`).join("");
-}
-async function showReport(){
- const id=$("rpStudent").value;if(!id)return toast("Select a student first",false);
- const st=S.students.find(x=>x.id===id);if(!st)return;
- const co=await getStudentCO(id);const raw=await getMarksForStudent(id);
- const subjectIds=[...new Set(raw.map(x=>x.subject_id).filter(Boolean))];
- const subjects=subjectIds.length?subjectIds.map(id=>S.subjects.find(s=>s.id===id)).filter(Boolean):S.subjects.filter(s=>!s.class_id||s.class_id===st.class_id);
- const rows=subjects.map(s=>{
-   const ms=raw.filter(x=>x.subject_id===s.id);
-   const vals=ms.map(x=>Number(x.marks??x.marks_obtained??x.mark??0)).filter(Number.isFinite);
-   const total=vals.length?vals.reduce((a,b)=>a+b,0):"—";
-   return `<tr><td>${esc(s.name||s.subject_name)}</td><td>${vals[0]??"—"}</td><td>${vals[1]??"—"}</td><td>${total}</td><td>—</td></tr>`
- }).join("");
- $("reportArea").innerHTML=`<div class="report" id="printReport">
- <div class="report-header"><div class="report-logo">${getImage(MEDIA_KEYS.logoLeft)?`<img src="${getImage(MEDIA_KEYS.logoLeft)}" alt="Logo">`:"JNV<br>LOGO"}</div><div class="report-title">
- <h2>${esc(SCHOOL)}</h2><h3>REPORT CARD FOR CLASS ${esc(C(st.class_id))}</h3><p>ACADEMIC SESSION: ${YEAR}</p></div><div class="report-logo">${getImage(MEDIA_KEYS.logoRight)?`<img src="${getImage(MEDIA_KEYS.logoRight)}" alt="Logo">`:"LOGO"}</div></div>
- <div class="student-info-wrap">
-   <div class="student-info">
-    <div><b>Roll No:</b> ${esc(st.roll_no)}</div><div><b>APAR ID:</b> ${esc(st.apar_id||"")}</div>
-    <div><b>Student's Name:</b> ${esc(st.full_name)}</div><div><b>Section:</b> ${esc(SEC(st.section_id))}</div>
-    <div><b>Name of the Mother:</b> ${esc(st.mother_name)}</div><div><b>Name of the Father:</b> ${esc(st.father_name)}</div>
-    <div><b>Date of Birth:</b> ${esc(st.date_of_birth||"")}</div><div><b>House:</b> ${esc(st.house||"")}</div>
-   </div>
-   <div class="report-student-photo" title="Student photograph">${getStudentPhoto(st.id)?`<img src="${getStudentPhoto(st.id)}" alt="Student Photo">`:'Student Photo'}</div>
- </div>
- <div class="part-title">Part A: Scholastic Area</div>
- <div class="table-wrap"><table><thead><tr><th>Subject Name</th><th>Term-1</th><th>Term-2</th><th>Total</th><th>Overall Grade</th></tr></thead><tbody>${rows||'<tr><td colspan="5">No marks found in the supported marks tables.</td></tr>'}</tbody></table></div>
- <div class="part-title">Part B: Co-Scholastic Area (Grade)</div>
- <table><thead><tr><th>Co-Scholastic Area</th><th>Annual Grade</th></tr></thead><tbody>${coRows(co)}</tbody></table>
- <div class="part-title">Part C: 10 Bagless Days</div>
- <table><tbody><tr><td>Participation (Yes/No)</td><td>During vacation: —</td><td>During school: —</td></tr></tbody></table>
- <div class="part-title">Part D: Discipline (03-point grading scale A, B, C)</div>
- <table><tbody><tr><td>Discipline</td><td>Annual Grade: ${esc(co.discipline||"—")}</td></tr></tbody></table>
- <div class="part-title">Part E: General Studies</div>
- <table><tbody><tr><td>Co-Scholastic Areas</td><td>Overall: —</td></tr><tr><td>General Studies</td><td>—</td></tr></tbody></table>
- <div class="part-title">Part F: Any Outstanding Achievement during the session</div>
- <div style="border-bottom:1px solid #333;height:25px">${esc(st.outstanding_achievement||"")}</div>
- <div class="part-title">Part G: Attendance</div>
- <table><thead><tr><th>Term</th><th>Total Working Days</th><th>Number of Days Attended</th><th>% Attendance</th></tr></thead>
- <tbody><tr><td>Term-1</td><td>—</td><td>—</td><td>—</td></tr><tr><td>Term-2</td><td>—</td><td>—</td><td>—</td></tr></tbody></table>
- <div class="sign">
-   <div class="sign-box"><div class="sign-img"></div><div class="sign-line">Signature of Class Teacher</div></div>
-   <div class="sign-box"><div class="sign-img">${getImage(MEDIA_KEYS.principalSignature)?`<img src="${getImage(MEDIA_KEYS.principalSignature)}" alt="Principal Signature">`:""}</div><div class="sign-line">Signature of Principal</div></div>
-   <div class="sign-box"><div class="sign-img">${getImage(MEDIA_KEYS.vpSignature)?`<img src="${getImage(MEDIA_KEYS.vpSignature)}" alt="Vice Principal Signature">`:""}</div><div class="sign-line">Signature of Vice Principal</div></div>
- </div>
- <div class="small-note" style="margin-top:20px"><b>Grading Scale for Co-scholastic Areas:</b> A — Exemplary, B — Proficient, C — Developing, D — Emerging, E — Beginner.</div>
- <div class="small-note" style="margin-top:8px"><b>Grading Scale for Discipline:</b> A — Outstanding, B — Very Good, C — Fair.</div>
- </div>
- <div class="toolbar no-print" style="margin-top:10px"><button class="primary" onclick="window.print()">Print Report Card</button><button class="secondary" onclick="downloadReportPDF()">Download PDF</button></div>`
-}
-async function downloadReportPDF(){
- const area=$("printReport");if(!area)return;
- const {jsPDF}=window.jspdf||{};if(!jsPDF)return toast("PDF library unavailable",false);
- const pdf=new jsPDF("p","mm","a4");
- const text=area.innerText||"Student Report Card";
- const lines=pdf.splitTextToSize(text,180);let y=15;
- pdf.setFontSize(9);for(const line of lines){if(y>285){pdf.addPage();y=15}pdf.text(line,15,y);y+=4.5}
- pdf.save("JNV_Report_Card.pdf");
-}
-init();
-</script>
-
-<script>
-function getSchoolName(){
-  return localStorage.getItem("jnv_school_name") || DEFAULT_SCHOOL_NAME;
-}
-function openSchoolNameSettings(){
-  const old=document.getElementById("schoolNameSettings");
-  if(old) old.remove();
-  const wrap=document.createElement("div");
-  wrap.id="schoolNameSettings";
-  wrap.style.cssText="position:fixed;inset:0;background:#0008;z-index:9999;display:grid;place-items:center;padding:20px";
-  wrap.innerHTML=`<div style="background:#fff;border-radius:18px;padding:20px;width:min(520px,100%);box-shadow:0 20px 60px #0005">
-    <h3 style="margin:0 0 8px">School Name Settings</h3>
-    <div style="font-size:13px;color:#68756e;margin-bottom:12px">Change the school name displayed on the app and report cards.</div>
-    <label style="font-size:13px;font-weight:700">School Name</label>
-    <input id="schoolNameInput" style="width:100%;padding:11px;border:1px solid #dce5df;border-radius:10px;margin:7px 0 14px"
-      value="${getSchoolName().replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}">
-    <div style="display:flex;gap:8px;justify-content:flex-end">
-      <button onclick="document.getElementById('schoolNameSettings').remove()" class="ghost">Cancel</button>
-      <button onclick="saveSchoolName()" class="primary">Save School Name</button>
-    </div>
-  </div>`;
-  document.body.appendChild(wrap);
-}
-function saveSchoolName(){
-  const el=document.getElementById("schoolNameInput");
-  const name=(el?.value||"").trim();
-  if(!name){ alert("Please enter a school name."); return; }
-  localStorage.setItem("jnv_school_name",name);
-  document.querySelectorAll("[data-school-name]").forEach(e=>e.textContent=name);
-  document.getElementById("schoolNameSettings")?.remove();
-  alert("School name saved successfully.");
-  location.reload();
-}
-</script>
-
-<script>
-/* ==========================================================
-   V7 ACADEMIC SETUP
-   Classes/Sections + Subject Choices + Teacher Assignments
-   Class Teachers + Examination Creation + Marks Entry
-   ========================================================== */
-
-async function createClassForm(){
-  modal("Add Class",`<div class="form-grid">
-    <div class="field wide"><label>Class Name</label><input id="newClassName" placeholder="e.g. VI"></div>
-    <div class="field"><label>Display Order</label><input id="newClassOrder" type="number" value="1"></div>
-    <div class="field"><label>Active</label><select id="newClassActive"><option value="true">Yes</option><option value="false">No</option></select></div>
-  </div><button class="primary full" onclick="createClass()">Save Class</button>`);
-}
-async function createClass(){
-  const name=$("newClassName").value.trim();
-  if(!name)return toast("Enter class name",false);
-  const r=await S.sb.from("classes").insert({
-    name,display_order:Number($("newClassOrder").value||0),
-    active:$("newClassActive").value==="true"
-  });
-  if(r.error)return toast(r.error.message,false);
-  closeModal();toast("Class created");await go("classes");
-}
-async function createSectionForm(){
-  await lookups();
-  modal("Add Section",`<div class="form-grid">
-    <div class="field"><label>Class</label><select id="newSectionClass">${S.classes.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join("")}</select></div>
-    <div class="field"><label>Section Name</label><input id="newSectionName" placeholder="A"></div>
-    <div class="field"><label>Active</label><select id="newSectionActive"><option value="true">Yes</option><option value="false">No</option></select></div>
-  </div><button class="primary full" onclick="createSection()">Save Section</button>`);
-}
-async function createSection(){
-  const r=await S.sb.from("sections").insert({
-    class_id:$("newSectionClass").value,
-    name:$("newSectionName").value.trim(),
-    active:$("newSectionActive").value==="true"
-  });
-  if(r.error)return toast(r.error.message,false);
-  closeModal();toast("Section created");await go("classes");
+async function deleteStudent(id){if(!confirm("Delete this student? Related records may be blocked by foreign keys."))return;const r=await state.sb.from("students").delete().eq("id",id);if(r.error){toast(r.error.message,false);return}toast("Student deleted");students()}
+function downloadStudentTemplate(){const csv="admission_no,roll_no,full_name,gender,dob,class,section,apaar_id,house,father_name,mother_name,photo_url\nADM001,1,Sample Student,Male,2012-01-15,VI,A,APAAR001,Aravali,Father Name,Mother Name,\n";const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download="JNV_Student_Bulk_Template.csv";a.click()}
+function importStudentsModal(){$("modal").innerHTML=`<div class="modal"><div class="modal-box"><div class="modal-head"><h3>Bulk Student Upload</h3><button class="close" onclick="closeModal()">×</button></div><div class="import-box"><p><b>Upload CSV</b></p><p class="small">Columns: admission_no, roll_no, full_name, gender, dob, class, section, apaar_id, house, father_name, mother_name, photo_url</p><input id="studentFile" type="file" accept=".csv" onchange="previewStudentImport(event)"></div><div id="importPreview"></div><div class="sticky-actions"><button class="ghost" onclick="downloadStudentTemplate()">Template</button><button class="primary" onclick="runStudentImport()">Import</button></div></div></div>`}
+function previewStudentImport(e){const f=e.target.files[0];if(!f)return;Papa.parse(f,{header:true,skipEmptyLines:true,complete:r=>{importRows=r.data||[];$("importPreview").innerHTML=`<div class="notice" style="margin-top:12px">${importRows.length} rows detected.</div>`}})}
+async function runStudentImport(){
+ if(!importRows.length){toast("Choose a CSV file first",false);return}
+ const cm=new Map(state.classes.map(x=>[String(x.name).toLowerCase().trim(),x.id])),sm=new Map(state.sections.map(x=>[`${String(x.name).toLowerCase().trim()}|${String(className(x.class_id)).toLowerCase().trim()}`,x.id]));
+ const rows=importRows.map(x=>({admission_no:String(x.admission_no||"").trim(),roll_no:String(x.roll_no||"").trim(),full_name:String(x.full_name||"").trim(),gender:String(x.gender||"").trim()||null,dob:String(x.dob||"").trim()||null,class_id:cm.get(String(x.class||"").trim().toLowerCase())||null,section_id:sm.get(`${String(x.section||"").trim().toLowerCase()}|${String(x.class||"").trim().toLowerCase()}`)||null,apaar_id:String(x.apaar_id||"").trim()||null,house:String(x.house||"").trim()||null,father_name:String(x.father_name||"").trim()||null,mother_name:String(x.mother_name||"").trim()||null,photo_url:String(x.photo_url||"").trim()||null})).filter(x=>x.admission_no&&x.roll_no&&x.full_name);
+ const bad=rows.filter(x=>!x.class_id||!x.section_id);if(bad.length){toast(`${bad.length} rows have unmatched Class/Section`,false);return}
+ const r=await state.sb.from("students").upsert(rows,{onConflict:"admission_no"});if(r.error){toast("Import failed: "+r.error.message,false);return}closeModal();toast(`${rows.length} students imported`);students();
 }
 
 async function classes(){
-  await lookups();
-  const ct=await S.sb.from("class_teacher_assignments").select("*").eq("academic_year",YEAR);
-  const cta=ct.data||[];
-  const ctRows=cta.map(x=>`<tr>
-    <td>${C(x.class_id)}</td><td>${SEC(x.section_id)}</td><td>${TC(x.teacher_id)}</td>
-    <td><button class="danger" onclick="deleteSimple('class_teacher_assignments','${x.id}','Class Teacher Assignment')">Delete</button></td>
-  </tr>`).join("");
+ await loadLookups();
+ $("content").innerHTML=`<div class="section-title"><h3>Classes</h3>${isAdmin()?'<button class="primary" onclick="classModal()">+ Add Class</button>':""}</div><div class="table-wrap"><table class="table"><thead><tr><th>Class</th><th>Order</th><th>Active</th><th>Action</th></tr></thead><tbody>${state.classes.map(x=>`<tr><td>${esc(x.name)}</td><td>${esc(x.display_order)}</td><td>${x.active!==false?"Yes":"No"}</td><td>${isAdmin()?`<button class="secondary" onclick="classModal('${x.id}')">Edit</button><button class="danger" onclick="deleteClass('${x.id}')">Delete</button>`:""}</td></tr>`).join("")}</tbody></table></div>
+<div class="section-title"><h3>Sections</h3>${isAdmin()?'<button class="secondary" onclick="sectionModal()">+ Add Section</button>':""}</div><div class="table-wrap"><table class="table"><thead><tr><th>Class</th><th>Section</th><th>Active</th><th>Action</th></tr></thead><tbody>${state.sections.map(x=>`<tr><td>${esc(className(x.class_id))}</td><td>${esc(x.name)}</td><td>${x.active!==false?"Yes":"No"}</td><td>${isAdmin()?`<button class="secondary" onclick="sectionModal('${x.id}')">Edit</button><button class="danger" onclick="deleteSection('${x.id}')">Delete</button>`:""}</td></tr>`).join("")}</tbody></table></div>`;
+}
+function classModal(id=""){const x=state.classes.find(a=>a.id===id)||{};$("modal").innerHTML=`<div class="modal"><div class="modal-box"><div class="modal-head"><h3>${id?"Edit":"Add"} Class</h3><button class="close" onclick="closeModal()">×</button></div><div class="field"><label>Class Name</label><input id="x_name" value="${esc(x.name)}"></div><div class="field"><label>Display Order</label><input id="x_order" type="number" value="${x.display_order||1}"></div><div class="field"><label>Active</label><select id="x_active"><option value="true" ${x.active!==false?"selected":""}>Yes</option><option value="false" ${x.active===false?"selected":""}>No</option></select></div><button class="primary full" onclick="saveClass('${id}')">Save</button></div></div>`}
+async function saveClass(id){const x={name:$("x_name").value.trim(),display_order:Number($("x_order").value)||1,active:$("x_active").value==="true"};if(!x.name){toast("Class name required",false);return}const r=id?await state.sb.from("classes").update(x).eq("id",id):await state.sb.from("classes").insert(x);if(r.error){toast(r.error.message,false);return}closeModal();toast(id?"Class updated":"Class saved");classes()}
+async function deleteClass(id){if(!confirm("Delete this class?"))return;const r=await state.sb.from("classes").delete().eq("id",id);if(r.error){toast(r.error.message,false);return}toast("Class deleted");classes()}
+function sectionModal(id=""){const x=state.sections.find(a=>a.id===id)||{};$("modal").innerHTML=`<div class="modal"><div class="modal-box"><div class="modal-head"><h3>${id?"Edit":"Add"} Section</h3><button class="close" onclick="closeModal()">×</button></div><div class="field"><label>Class</label><select id="x_class">${state.classes.map(c=>`<option value="${c.id}" ${x.class_id===c.id?"selected":""}>${esc(c.name)}</option>`).join("")}</select></div><div class="field"><label>Section Name</label><input id="x_name" value="${esc(x.name)}"></div><div class="field"><label>Active</label><select id="x_active"><option value="true" ${x.active!==false?"selected":""}>Yes</option><option value="false" ${x.active===false?"selected":""}>No</option></select></div><button class="primary full" onclick="saveSection('${id}')">Save</button></div></div>`}
+async function saveSection(id){const x={name:$("x_name").value.trim(),class_id:$("x_class").value,active:$("x_active").value==="true"};if(!x.name){toast("Section name required",false);return}const r=id?await state.sb.from("sections").update(x).eq("id",id):await state.sb.from("sections").insert(x);if(r.error){toast(r.error.message,false);return}closeModal();toast(id?"Section updated":"Section saved");classes()}
+async function deleteSection(id){if(!confirm("Delete this section?"))return;const r=await state.sb.from("sections").delete().eq("id",id);if(r.error){toast(r.error.message,false);return}toast("Section deleted");classes()}
 
-  $("content").innerHTML=`
-  <div class="section-title"><h3>Classes</h3><div class="actions">
-    <button class="primary" onclick="createClassForm()">+ Add Class</button>
-    ${bulkControls("classes","Class",["name","display_order","active"],[["VI",6,true]])}
-  </div></div>
-  ${tbl(["Class","Order","Active","Action"],S.classes.map(x=>`<tr>
-    <td><b>${esc(x.name)}</b></td><td>${x.display_order??""}</td><td>${x.active===false?"No":"Yes"}</td>
-    <td class="actions"><button class="secondary" onclick="editSimple('classes','${x.id}','Class',[["name","Class Name"],["display_order","Display Order","number"],["active","Active"]])">Edit</button>
-    <button class="danger" onclick="deleteSimple('classes','${x.id}','Class')">Delete</button></td>
-  </tr>`).join(""))}
+async function subjects(){
+ await loadLookups();
+ $("content").innerHTML=`<div class="toolbar">${isAdmin()?'<button class="primary" onclick="subjectModal()">+ Add Subject</button><button class="secondary" onclick="subjectBulkModal()">⇧ Bulk Upload</button>':""}</div><div class="table-wrap"><table class="table"><thead><tr><th>Code</th><th>Subject</th><th>Active</th><th>Action</th></tr></thead><tbody>${state.subjects.map(x=>`<tr><td>${esc(x.code)}</td><td>${esc(x.name)}</td><td>${x.active!==false?"Yes":"No"}</td><td>${isAdmin()?`<button class="secondary" onclick="subjectModal('${x.id}')">Edit</button><button class="danger" onclick="deleteSubject('${x.id}')">Delete</button>`:""}</td></tr>`).join("")}</tbody></table></div>`;
+}
+function subjectModal(id=""){const x=state.subjects.find(a=>a.id===id)||{};$("modal").innerHTML=`<div class="modal"><div class="modal-box"><div class="modal-head"><h3>${id?"Edit":"Add"} Subject</h3><button class="close" onclick="closeModal()">×</button></div><div class="form-grid"><div class="field"><label>Code</label><input id="sub_code" value="${esc(x.code)}"></div><div class="field"><label>Name</label><input id="sub_name" value="${esc(x.name)}"></div></div><div class="field"><label>Active</label><select id="sub_active"><option value="true" ${x.active!==false?"selected":""}>Yes</option><option value="false" ${x.active===false?"selected":""}>No</option></select></div><button class="primary full" onclick="saveSubject('${id}')">Save</button></div></div>`}
+async function saveSubject(id){const x={code:$("sub_code").value.trim(),name:$("sub_name").value.trim(),active:$("sub_active").value==="true"};if(!x.name){toast("Subject name required",false);return}const r=id?await state.sb.from("subjects").update(x).eq("id",id):await state.sb.from("subjects").insert(x);if(r.error){toast(r.error.message,false);return}closeModal();toast(id?"Subject updated":"Subject saved");subjects()}
+async function deleteSubject(id){if(!confirm("Delete this subject?"))return;const r=await state.sb.from("subjects").delete().eq("id",id);if(r.error){toast(r.error.message,false);return}toast("Subject deleted");subjects()}
+function subjectBulkModal(){$("modal").innerHTML=`<div class="modal"><div class="modal-box"><div class="modal-head"><h3>Bulk Subject Upload</h3><button class="close" onclick="closeModal()">×</button></div><div class="field"><label>One per line: CODE,Subject Name</label><textarea id="bulkSubjects" placeholder="ENG,English&#10;HIN,Hindi&#10;MAT,Mathematics"></textarea></div><button class="primary full" onclick="saveBulkSubjects()">Upload Subjects</button></div></div>`}
+async function saveBulkSubjects(){const rows=$("bulkSubjects").value.split(/\n/).map(x=>{const p=x.split(",");return{code:(p[0]||"").trim(),name:p.slice(1).join(",").trim(),active:true}}).filter(x=>x.code&&x.name);if(!rows.length){toast("Enter subjects first",false);return}const r=await state.sb.from("subjects").insert(rows);if(r.error){toast(r.error.message,false);return}closeModal();toast(`${rows.length} subjects uploaded`);subjects()}
 
-  <div class="section-title"><h3>Sections</h3><div class="actions">
-    <button class="primary" onclick="createSectionForm()">+ Add Section</button>
-    ${bulkControls("sections","Section",["class_id","name","active"],[["CLASS_ID","A",true]])}
-  </div></div>
-  <div class="notice">For bulk sections, first create the classes. The <b>class_id</b> column must contain the UUID shown by Supabase for that class.</div>
-  ${tbl(["Class","Section","Active","Action"],S.sections.map(x=>`<tr>
-    <td>${C(x.class_id)}</td><td>${esc(x.name)}</td><td>${x.active===false?"No":"Yes"}</td>
-    <td class="actions"><button class="secondary" onclick="editSectionForm('${x.id}')">Edit</button>
-    <button class="danger" onclick="deleteSimple('sections','${x.id}','Section')">Delete</button></td>
-  </tr>`).join(""))}
-
-  <div class="section-title"><h3>Class Teacher Assignment</h3>
-    <button class="primary" onclick="classTeacherForm()">+ Assign Class Teacher</button>
-  </div>
-  <div class="notice">One class teacher is assigned to each Class + Section for ${YEAR}. You can edit/delete the assignment.</div>
-  ${tbl(["Class","Section","Class Teacher","Action"],ctRows)}
-
-  <div class="section-title"><h3>Individual Student Subject Choice</h3>
-    <button class="primary" onclick="studentChoiceForm()">+ Assign Student Subjects</button>
-  </div>
-  <div class="notice">Use this for optional/elective subjects. Each student can have a different subject combination.</div>
-  <button class="secondary" onclick="studentChoiceForm()">Open Subject Choice Manager</button>`;
+async function exams(){
+ await loadLookups();
+ $("content").innerHTML=`<div class="toolbar">${isAdmin()?'<button class="primary" onclick="examModal()">+ Create Examination</button>':""}</div><div class="table-wrap"><table class="table"><thead><tr><th>Name</th><th>Year</th><th>Date</th><th>Class</th><th>Section</th><th>Max</th><th>Pass %</th><th>Status</th><th>Action</th></tr></thead><tbody>${state.exams.map(x=>`<tr><td>${esc(x.name)}</td><td>${esc(x.academic_year)}</td><td>${esc(x.exam_date)}</td><td>${esc(className(x.class_id))}</td><td>${esc(sectionName(x.section_id))}</td><td>${esc(x.maximum_marks??x.max_marks??100)}</td><td>${esc(x.pass_marks??33)}</td><td><span class="badge ${x.status==="published"?"":"warn"}">${esc(x.status||"draft")}</span></td><td>${isAdmin()?`<button class="secondary" onclick="examModal('${x.id}')">Edit</button><button class="danger" onclick="deleteExam('${x.id}')">Delete</button><button class="ghost" onclick="toggleExamStatus('${x.id}','${x.status||"draft"}')">${x.status==="published"?"Unpublish":"Publish"}</button>`:""}</td></tr>`).join("")}</tbody></table></div>`;
 }
-
-
-
-async function editSectionForm(id){
-  await lookups();
-  const x=S.sections.find(a=>a.id===id);if(!x)return toast("Section not found",false);
-  modal("Edit Section",`<div class="form-grid">
-    <div class="field"><label>Class</label><select id="esClass">${S.classes.map(c=>`<option value="${c.id}" ${c.id===x.class_id?"selected":""}>${esc(c.name)}</option>`).join("")}</select></div>
-    <div class="field"><label>Section Name</label><input id="esName" value="${esc(x.name)}"></div>
-    <div class="field"><label>Active</label><select id="esActive"><option value="true" ${x.active!==false?"selected":""}>Yes</option><option value="false" ${x.active===false?"selected":""}>No</option></select></div>
-  </div><button class="primary full" onclick="saveSectionEdit('${id}')">Save Changes</button>`);
-}
-async function saveSectionEdit(id){
-  const o={class_id:$("esClass").value,name:$("esName").value.trim(),active:$("esActive").value==="true"};
-  if(!o.name)return toast("Enter section name",false);
-  const r=await S.sb.from("sections").update(o).eq("id",id).select("id");
-  if(r.error)return toast(r.error.message,false);
-  if(!r.data?.length)return toast("Update was not allowed by Supabase RLS.",false);
-  closeModal();toast("Section updated");await go("classes");
-}
-
-async function classTeacherForm(){
-  await lookups();
-  modal("Assign Class Teacher",`<div class="form-grid">
-    <div class="field"><label>Class</label><select id="ctClass" onchange="ctLoadSections()">${S.classes.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join("")}</select></div>
-    <div class="field"><label>Section</label><select id="ctSection"></select></div>
-    <div class="field wide"><label>Teacher</label><select id="ctTeacher">${S.teachers.map(t=>`<option value="${t.id}">${esc(t.full_name)}${t.employee_id?" — "+esc(t.employee_id):""}</option>`).join("")}</select></div>
-  </div><button class="primary full" onclick="saveClassTeacher()">Save Class Teacher</button>`);
-  ctLoadSections();
-}
-function ctLoadSections(){
-  const cl=$("ctClass"),se=$("ctSection"); if(!cl||!se)return;
-  se.innerHTML=S.sections.filter(x=>x.class_id===cl.value).map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join("");
-}
-async function saveClassTeacher(){
-  const o={class_id:$("ctClass").value,section_id:$("ctSection").value,teacher_id:$("ctTeacher").value,academic_year:YEAR};
-  if(!o.section_id||!o.teacher_id)return toast("Select section and teacher",false);
-  const r=await S.sb.from("class_teacher_assignments").upsert(o,{onConflict:"class_id,section_id,academic_year"});
-  if(r.error)return toast(r.error.message,false);
-  closeModal();toast("Class teacher assigned");await go("classes");
-}
-
-
-async function editClassTeacherForm(id){
-  await lookups();
-  const r=await S.sb.from("class_teacher_assignments").select("*").eq("id",id).maybeSingle();
-  if(r.error)return toast(r.error.message,false);
-  const x=r.data;if(!x)return toast("Assignment not found",false);
-  modal("Edit Class Teacher",`<div class="form-grid">
-    <div class="field"><label>Class</label><select id="ectClass" onchange="ectLoadSections()">${S.classes.map(c=>`<option value="${c.id}" ${c.id===x.class_id?"selected":""}>${esc(c.name)}</option>`).join("")}</select></div>
-    <div class="field"><label>Section</label><select id="ectSection"></select></div>
-    <div class="field wide"><label>Teacher</label><select id="ectTeacher">${S.teachers.map(t=>`<option value="${t.id}" ${t.id===x.teacher_id?"selected":""}>${esc(t.full_name)}</option>`).join("")}</select></div>
-  </div><button class="primary full" onclick="saveEditedClassTeacher('${id}')">Save Changes</button>`);
-  ectLoadSections(x.section_id);
-}
-function ectLoadSections(selected){
-  const cl=$("ectClass"),se=$("ectSection");if(!cl||!se)return;
-  se.innerHTML=S.sections.filter(x=>x.class_id===cl.value).map(x=>`<option value="${x.id}" ${x.id===selected?"selected":""}>${esc(x.name)}</option>`).join("");
-}
-async function saveEditedClassTeacher(id){
-  const o={class_id:$("ectClass").value,section_id:$("ectSection").value,teacher_id:$("ectTeacher").value,academic_year:YEAR};
-  if(!o.section_id||!o.teacher_id)return toast("Select section and teacher",false);
-  const r=await S.sb.from("class_teacher_assignments").update(o).eq("id",id).select("id");
-  if(r.error)return toast(r.error.message,false);
-  if(!r.data?.length)return toast("Update was not allowed by Supabase RLS.",false);
-  closeModal();toast("Class teacher updated");await go("classes");
-}
-
-async function studentChoiceForm(){
-  await lookups();
-  modal("Individual Student Subject Choice",`<div class="form-grid">
-    <div class="field"><label>Class</label><select id="scClass" onchange="scLoadSections()">${S.classes.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join("")}</select></div>
-    <div class="field"><label>Section</label><select id="scSection" onchange="scLoadStudents()"></select></div>
-    <div class="field wide"><label>Student</label><select id="scStudent" onchange="scLoadChoices()"></select></div>
-  </div>
-  <div id="scSubjects" class="card" style="margin-top:10px">Select a student first.</div>
-  <button class="primary full" onclick="saveStudentChoices()">Save Subject Choices</button>`);
-  scLoadSections();
-}
-function scLoadSections(){
-  const cl=$("scClass"),se=$("scSection");if(!cl||!se)return;
-  se.innerHTML=S.sections.filter(x=>x.class_id===cl.value).map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join("");
-  scLoadStudents();
-}
-function scLoadStudents(){
-  const cl=$("scClass"),se=$("scSection"),st=$("scStudent");if(!st)return;
-  const rows=S.students.filter(x=>x.class_id===cl.value&&(!se.value||x.section_id===se.value));
-  st.innerHTML=rows.map(x=>`<option value="${x.id}">${esc(x.roll_no)} — ${esc(x.full_name)}</option>`).join("");
-  scLoadChoices();
-}
-async function scLoadChoices(){
-  const box=$("scSubjects"),student=$("scStudent");if(!box||!student)return;
-  if(!student.value){box.innerHTML="No student selected.";return;}
-  const r=await S.sb.from("student_subject_choices").select("subject_id").eq("student_id",student.value).eq("academic_year",YEAR);
-  if(r.error){box.innerHTML=`<div class="err">${esc(r.error.message)}</div>`;return}
-  const selected=(r.data||[]).map(x=>x.subject_id);
-  const st=S.students.find(x=>x.id===student.value);
-  const subs=S.subjects.filter(s=>!s.class_id||s.class_id===st?.class_id);
-  box.innerHTML=`<b>Select subjects for ${esc(st?.full_name||"student")}</b>
-  <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px">
-  ${subs.map(s=>`<label style="border:1px solid var(--line);padding:9px;border-radius:10px">
-    <input type="checkbox" class="scSub" value="${s.id}" ${selected.includes(s.id)?"checked":""}> ${esc(s.name||s.subject_name)}
-  </label>`).join("")}</div>`;
-}
-async function saveStudentChoices(){
-  const student=$("scStudent").value;if(!student)return toast("Select a student",false);
-  const ids=[...document.querySelectorAll(".scSub:checked")].map(x=>x.value);
-  const d=await S.sb.from("student_subject_choices").delete().eq("student_id",student).eq("academic_year",YEAR);
-  if(d.error)return toast(d.error.message,false);
-  if(ids.length){
-    const r=await S.sb.from("student_subject_choices").insert(ids.map(subject_id=>({student_id:student,subject_id,academic_year:YEAR,choice_type:"Optional"})));
-    if(r.error)return toast(r.error.message,false);
-  }
-  closeModal();toast("Student subject choices saved");
-}
+function examModal(id=""){const x=state.exams.find(a=>a.id===id)||{};$("modal").innerHTML=`<div class="modal"><div class="modal-box"><div class="modal-head"><h3>${id?"Edit":"Create"} Examination</h3><button class="close" onclick="closeModal()">×</button></div><div class="form-grid"><div class="field"><label>Name *</label><input id="e_name" value="${esc(x.name)}" placeholder="PWT I / Term-I / Annual"></div><div class="field"><label>Academic Year</label><input id="e_year" value="${esc(x.academic_year||YEAR)}"></div><div class="field"><label>Exam Date</label><input id="e_date" type="date" value="${esc(x.exam_date)}"></div><div class="field"><label>Class *</label><select id="e_class" onchange="examSectionOptions()"><option value="">Select</option>${state.classes.map(c=>`<option value="${c.id}" ${x.class_id===c.id?"selected":""}>${esc(c.name)}</option>`).join("")}</select></div><div class="field"><label>Section *</label><select id="e_section">${sectionsFor(x.class_id).map(s=>`<option value="${s.id}" ${x.section_id===s.id?"selected":""}>${esc(s.name)}</option>`).join("")}</select></div><div class="field"><label>Maximum Marks</label><input id="e_max" type="number" value="${x.maximum_marks??x.max_marks??100}"></div><div class="field"><label>Pass %</label><input id="e_pass" type="number" value="${x.pass_marks??33}"></div><div class="field"><label>Status</label><select id="e_status"><option value="draft" ${x.status!=="published"?"selected":""}>Draft</option><option value="published" ${x.status==="published"?"selected":""}>Published</option></select></div></div><button class="primary full" onclick="saveExam('${id}')">Save Examination</button></div></div>`}
+function examSectionOptions(){const c=$("e_class").value;$("e_section").innerHTML=sectionsFor(c).map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join("")}
+async function saveExam(id){const x={name:$("e_name").value.trim(),academic_year:$("e_year").value.trim()||YEAR,exam_date:$("e_date").value||null,class_id:$("e_class").value||null,section_id:$("e_section").value||null,maximum_marks:Number($("e_max").value)||100,pass_marks:Number($("e_pass").value)||33,status:$("e_status").value,created_by:state.user.id};if(!x.name||!x.class_id||!x.section_id){toast("Name, class and section are required",false);return}const r=id?await state.sb.from("examinations").update(x).eq("id",id):await state.sb.from("examinations").insert(x);if(r.error){toast(r.error.message,false);return}closeModal();toast(id?"Examination updated":"Examination created");exams()}
+async function deleteExam(id){if(!confirm("Delete this examination? Marks linked to it may prevent deletion."))return;const r=await state.sb.from("examinations").delete().eq("id",id);if(r.error){toast(r.error.message,false);return}toast("Examination deleted");exams()}
+async function toggleExamStatus(id,status){const r=await state.sb.from("examinations").update({status:status==="published"?"draft":"published"}).eq("id",id);if(r.error){toast(r.error.message,false);return}exams()}
 
 async function teachers(){
-  await lookups();
-  const ta=await S.sb.from("teacher_subject_assignments").select("*").eq("academic_year",YEAR);
-  const rows=(ta.data||[]).map(x=>`<tr><td>${TC(x.teacher_id)}</td><td>${C(x.class_id)}</td><td>${SEC(x.section_id)}</td><td>${SUB(x.subject_id)}</td>
-    <td><button class="danger" onclick="deleteSimple('teacher_subject_assignments','${x.id}','Teacher Subject Assignment')">Delete</button></td></tr>`).join("");
-  $("content").innerHTML=`
-  <div class="section-title"><h3>Teachers</h3><div class="actions">
-    <button class="primary" onclick="teacherForm()">+ Add Teacher</button>
-    ${bulkControls("teachers","Teacher",["full_name","email","phone","employee_id","active"],[["Sample Teacher","teacher@example.com","9999999999","EMP001",true]])}
-  </div></div>
-  ${tbl(["Teacher","Email","Phone","Employee ID","Active","Action"],S.teachers.map(x=>`<tr><td><b>${esc(x.full_name)}</b></td><td>${esc(x.email)}</td><td>${esc(x.phone)}</td><td>${esc(x.employee_id)}</td><td>${x.active===false?"No":"Yes"}</td>
-  <td class="actions"><button class="secondary" onclick="editSimple('teachers','${x.id}','Teacher',[["full_name","Full Name"],["email","Email"],["phone","Phone"],["employee_id","Employee ID"]])">Edit</button>
-  <button class="danger" onclick="deleteSimple('teachers','${x.id}','Teacher')">Delete</button></td></tr>`).join(""))}
-  <div class="section-title"><h3>Teacher → Class/Section → Subject</h3><button class="primary" onclick="teacherSubjectForm()">+ Assign Subject Teacher</button></div>
-  ${tbl(["Teacher","Class","Section","Subject","Action"],rows)}`;
+ if(!isAdmin()){toast("Admin access required",false);return}
+ const r=await state.sb.from("profiles").select("*").order("full_name");if(r.error)throw r.error;state.teachers=r.data||[];
+ $("content").innerHTML=`<div class="toolbar"><button class="secondary" onclick="teacherBulkModal()">⇧ Bulk Upload Teacher Details</button><span class="pill">Authentication accounts are managed in Supabase Auth.</span></div><div class="table-wrap"><table class="table"><thead><tr><th>Name</th><th>Employee ID</th><th>Designation</th><th>Role</th><th>Active</th><th>Action</th></tr></thead><tbody>${state.teachers.map(x=>`<tr><td>${esc(x.full_name)}</td><td>${esc(x.employee_id)}</td><td>${esc(x.designation)}</td><td>${esc(x.role)}</td><td>${x.active!==false?"Yes":"No"}</td><td><button class="secondary" onclick="editTeacher('${x.id}')">Edit</button><button class="danger" onclick="deleteTeacher('${x.id}')">Deactivate</button></td></tr>`).join("")}</tbody></table></div>`;
 }
-function teacherForm(){
-  modal("Add Teacher",`<div class="form-grid">
-    <div class="field wide"><label>Full Name</label><input id="tfName"></div>
-    <div class="field"><label>Email</label><input id="tfEmail" type="email"></div>
-    <div class="field"><label>Phone</label><input id="tfPhone"></div>
-    <div class="field"><label>Employee ID</label><input id="tfEmp"></div>
-    <div class="field"><label>Active</label><select id="tfActive"><option value="true">Yes</option><option value="false">No</option></select></div>
-  </div><button class="primary full" onclick="saveTeacher()">Save Teacher</button>`);
-}
-async function saveTeacher(){
-  const r=await S.sb.from("teachers").insert({
-    full_name:$("tfName").value.trim(),email:$("tfEmail").value.trim(),
-    phone:$("tfPhone").value.trim(),employee_id:$("tfEmp").value.trim(),
-    active:$("tfActive").value==="true"
-  });
-  if(r.error)return toast(r.error.message,false);closeModal();toast("Teacher added");await go("teachers");
-}
-async function teacherSubjectForm(){
-  await lookups();
-  modal("Assign Subject Teacher",`<div class="form-grid">
-    <div class="field wide"><label>Teacher</label><select id="tsaTeacher">${S.teachers.map(t=>`<option value="${t.id}">${esc(t.full_name)}</option>`).join("")}</select></div>
-    <div class="field"><label>Class</label><select id="tsaClass" onchange="tsaLoadSections()">${S.classes.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join("")}</select></div>
-    <div class="field"><label>Section</label><select id="tsaSection"></select></div>
-    <div class="field wide"><label>Subject</label><select id="tsaSubject">${S.subjects.map(s=>`<option value="${s.id}">${esc(s.name||s.subject_name)}</option>`).join("")}</select></div>
-  </div><button class="primary full" onclick="saveTeacherSubject()">Save Assignment</button>`);
-  tsaLoadSections();
-}
-function tsaLoadSections(){
-  const c=$("tsaClass"),s=$("tsaSection");if(!c||!s)return;
-  s.innerHTML=`<option value="">All Sections</option>`+S.sections.filter(x=>x.class_id===c.value).map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join("");
-}
-async function saveTeacherSubject(){
-  const o={teacher_id:$("tsaTeacher").value,class_id:$("tsaClass").value,section_id:$("tsaSection").value||null,subject_id:$("tsaSubject").value,academic_year:YEAR};
-  const r=await S.sb.from("teacher_subject_assignments").upsert(o,{onConflict:"teacher_id,class_id,section_id,subject_id,academic_year"});
-  if(r.error)return toast(r.error.message,false);
-  closeModal();toast("Subject teacher assigned");await go("teachers");
-}
+function editTeacher(id){const x=state.teachers.find(a=>a.id===id)||{};$("modal").innerHTML=`<div class="modal"><div class="modal-box"><div class="modal-head"><h3>Edit Teacher Profile</h3><button class="close" onclick="closeModal()">×</button></div><div class="form-grid"><div class="field"><label>Full Name</label><input id="t_name" value="${esc(x.full_name)}"></div><div class="field"><label>Employee ID</label><input id="t_emp" value="${esc(x.employee_id)}"></div><div class="field"><label>Designation</label><input id="t_des" value="${esc(x.designation)}"></div><div class="field"><label>Role</label><select id="t_role"><option ${x.role==="admin"?"selected":""}>admin</option><option ${x.role!=="admin"?"selected":""}>teacher</option></select></div><div class="field"><label>Active</label><select id="t_active"><option value="true" ${x.active!==false?"selected":""}>Yes</option><option value="false" ${x.active===false?"selected":""}>No</option></select></div></div><button class="primary full" onclick="saveTeacher('${id}')">Save</button></div></div>`}
+async function saveTeacher(id){const x={full_name:$("t_name").value.trim(),employee_id:$("t_emp").value.trim(),designation:$("t_des").value.trim(),role:$("t_role").value,active:$("t_active").value==="true"};const r=await state.sb.from("profiles").update(x).eq("id",id);if(r.error){toast(r.error.message,false);return}closeModal();toast("Teacher profile updated");teachers()}
+async function deleteTeacher(id){if(!confirm("Deactivate this teacher profile?"))return;const r=await state.sb.from("profiles").update({active:false}).eq("id",id);if(r.error){toast(r.error.message,false);return}toast("Teacher deactivated");teachers()}
+function teacherBulkModal(){$("modal").innerHTML=`<div class="modal"><div class="modal-box"><div class="modal-head"><h3>Bulk Teacher Details</h3><button class="close" onclick="closeModal()">×</button></div><div class="notice">CSV columns: employee_id,full_name,designation,role,active. The employee_id must already exist in profiles.</div><div class="field"><input id="teacherFile" type="file" accept=".csv" onchange="previewTeacherImport(event)"></div><div id="teacherPreview"></div><button class="primary full" onclick="runTeacherImport()">Update Teacher Profiles</button></div></div>`}
+function previewTeacherImport(e){Papa.parse(e.target.files[0],{header:true,skipEmptyLines:true,complete:r=>{teacherRows=r.data||[];$("teacherPreview").innerHTML=`<div class="notice">${teacherRows.length} rows detected.</div>`}})}
+async function runTeacherImport(){for(const x of teacherRows){const p=state.teachers.find(t=>String(t.employee_id).trim()===String(x.employee_id||"").trim());if(!p)continue;const r=await state.sb.from("profiles").update({full_name:x.full_name||p.full_name,designation:x.designation||p.designation,role:x.role||p.role,active:String(x.active||"true").toLowerCase()!=="false"}).eq("id",p.id);if(r.error){toast(r.error.message,false);return}}closeModal();toast("Teacher details updated");teachers()}
 
-function examinationForm(){
-  modal("Create Examination",`<div class="form-grid">
-    <div class="field wide"><label>Examination Name</label><input id="exName" placeholder="Periodic Test 1"></div>
-    <div class="field"><label>Exam Date</label><input id="exDate" type="date"></div>
-    <div class="field"><label>Class</label><select id="exClass"><option value="">All Classes</option>${S.classes.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join("")}</select></div>
-    <div class="field"><label>Maximum Marks</label><input id="exMax" type="number" value="40"></div>
-    <div class="field"><label>Active</label><select id="exActive"><option value="true">Yes</option><option value="false">No</option></select></div>
-  </div><button class="primary full" onclick="saveExamination()">Create Examination</button>`);
+async function assignments(){
+ if(!isAdmin()){toast("Admin access required",false);return}
+ await loadLookups();
+ $("content").innerHTML=`<div class="section-title"><h3>Teacher – Subject – Class – Section</h3><div class="actions"><button class="primary" onclick="assignmentModal()">+ Assign</button><button class="secondary" onclick="assignmentBulkModal()">⇧ Bulk Upload</button></div></div><div class="table-wrap"><table class="table"><thead><tr><th>Teacher</th><th>Subject</th><th>Class</th><th>Section</th><th>Year</th><th>Active</th><th>Action</th></tr></thead><tbody>${state.assignments.map(x=>`<tr><td>${esc(teacherName(x.teacher_id))}</td><td>${esc(subjectName(x.subject_id))}</td><td>${esc(className(x.class_id))}</td><td>${esc(sectionName(x.section_id))}</td><td>${esc(x.academic_year)}</td><td>${x.active!==false?"Yes":"No"}</td><td><button class="secondary" onclick="assignmentModal('${x.id}')">Edit</button><button class="danger" onclick="deleteAssignment('${x.id}')">Delete</button></td></tr>`).join("")}</tbody></table></div>`;
 }
-async function saveExamination(){
-  const name=$("exName").value.trim();if(!name)return toast("Enter examination name",false);
-  const r=await S.sb.from("examinations").insert({
-    name,exam_date:$("exDate").value||null,class_id:$("exClass").value||null,
-    max_marks:Number($("exMax").value||0),active:$("exActive").value==="true"
-  });
-  if(r.error)return toast(r.error.message,false);closeModal();toast("Examination created");await go("exams");
-}
-async function exams(){
-  await lookups();
-  $("content").innerHTML=`<div class="section-title"><h3>Examinations</h3><div class="actions">
-    <button class="primary" onclick="examinationForm()">+ Create Examination</button>
-    ${bulkControls("examinations","Examination",["name","exam_date","class_id","max_marks","active"],[["Periodic Test 1","2026-08-25","",40,true]])}
-  </div></div>
-  <div class="notice"><b>Create an examination first.</b> Then go to <b>Marks Entry</b>, select the examination, class and subject, and enter marks.</div>
-  ${tbl(["Examination","Date","Class","Max Marks","Active","Action"],S.exams.map(x=>`<tr>
-    <td><b>${esc(x.name||x.exam_name||x.title)}</b></td><td>${esc(x.exam_date||"")}</td><td>${C(x.class_id)||"All"}</td><td>${esc(x.max_marks||"")}</td><td>${x.active===false?"No":"Yes"}</td>
-    <td class="actions"><button class="secondary" onclick="editSimple('examinations','${x.id}','Examination',[["name","Name"],["exam_date","Date","date"],["class_id","Class ID"],["max_marks","Maximum Marks","number"],["active","Active","boolean"]])">Edit</button>
-    <button class="danger" onclick="deleteSimple('examinations','${x.id}','Examination')">Delete</button></td>
-  </tr>`).join(""))}`;
-}
+function assignmentModal(id=""){const x=state.assignments.find(a=>a.id===id)||{};$("modal").innerHTML=`<div class="modal"><div class="modal-box"><div class="modal-head"><h3>${id?"Edit":"Add"} Assignment</h3><button class="close" onclick="closeModal()">×</button></div><div class="form-grid"><div class="field"><label>Teacher</label><select id="a_teacher">${state.teachers.filter(t=>t.active!==false).map(t=>`<option value="${t.id}" ${x.teacher_id===t.id?"selected":""}>${esc(t.full_name)} — ${esc(t.employee_id)}</option>`).join("")}</select></div><div class="field"><label>Subject</label><select id="a_subject">${state.subjects.filter(t=>t.active!==false).map(t=>`<option value="${t.id}" ${x.subject_id===t.id?"selected":""}>${esc(t.name)}</option>`).join("")}</select></div><div class="field"><label>Class</label><select id="a_class" onchange="assignmentSectionOptions()">${state.classes.filter(t=>t.active!==false).map(t=>`<option value="${t.id}" ${x.class_id===t.id?"selected":""}>${esc(t.name)}</option>`).join("")}</select></div><div class="field"><label>Section</label><select id="a_section">${sectionsFor(x.class_id).map(t=>`<option value="${t.id}" ${x.section_id===t.id?"selected":""}>${esc(t.name)}</option>`).join("")}</select></div><div class="field"><label>Academic Year</label><input id="a_year" value="${esc(x.academic_year||YEAR)}"></div><div class="field"><label>Active</label><select id="a_active"><option value="true" ${x.active!==false?"selected":""}>Yes</option><option value="false" ${x.active===false?"selected":""}>No</option></select></div></div><button class="primary full" onclick="saveAssignment('${id}')">Save Assignment</button></div></div>`}
+function assignmentSectionOptions(){const c=$("a_class").value;$("a_section").innerHTML=sectionsFor(c).map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join("")}
+async function saveAssignment(id){const x={teacher_id:$("a_teacher").value,subject_id:$("a_subject").value,class_id:$("a_class").value,section_id:$("a_section").value,academic_year:$("a_year").value||YEAR,active:$("a_active").value==="true"};const r=id?await state.sb.from("teacher_subjects").update(x).eq("id",id):await state.sb.from("teacher_subjects").insert(x);if(r.error){toast(r.error.message,false);return}closeModal();toast(id?"Assignment updated":"Assignment saved");assignments()}
+async function deleteAssignment(id){if(!confirm("Delete assignment?"))return;const r=await state.sb.from("teacher_subjects").delete().eq("id",id);if(r.error){toast(r.error.message,false);return}toast("Assignment deleted");assignments()}
+function assignmentBulkModal(){$("modal").innerHTML=`<div class="modal"><div class="modal-box"><div class="modal-head"><h3>Bulk Assignment Upload</h3><button class="close" onclick="closeModal()">×</button></div><div class="notice">Columns: employee_id, subject_code, class, section, academic_year</div><input id="assignmentFile" type="file" accept=".csv" onchange="previewAssignmentImport(event)"><div id="assignmentPreview"></div><button class="primary full" onclick="runAssignmentImport()">Import Assignments</button></div></div>`}
+function previewAssignmentImport(e){Papa.parse(e.target.files[0],{header:true,skipEmptyLines:true,complete:r=>{assignmentRows=r.data||[];$("assignmentPreview").innerHTML=`<div class="notice">${assignmentRows.length} rows detected.</div>`}})}
+async function runAssignmentImport(){for(const x of assignmentRows){const t=state.teachers.find(a=>String(a.employee_id).trim()===String(x.employee_id||"").trim()),s=state.subjects.find(a=>String(a.code).toLowerCase()===String(x.subject_code||"").trim().toLowerCase()),c=state.classes.find(a=>String(a.name).toLowerCase()===String(x.class||"").trim().toLowerCase()),sec=state.sections.find(a=>a.class_id===c?.id&&String(a.name).toLowerCase()===String(x.section||"").trim().toLowerCase());if(!t||!s||!c||!sec)continue;const r=await state.sb.from("teacher_subjects").insert({teacher_id:t.id,subject_id:s.id,class_id:c.id,section_id:sec.id,academic_year:x.academic_year||YEAR,active:true});if(r.error){toast(r.error.message,false);return}}closeModal();toast("Assignments imported");assignments()}
 
+function teacherAllowed(subjectId,classId,sectionId){if(isAdmin())return true;return state.assignments.some(a=>a.teacher_id===state.user.id&&a.subject_id===subjectId&&a.class_id===classId&&a.section_id===sectionId&&a.active!==false)}
 async function marks(){
-  await lookups();
-  const cls=S.classes[0]?.id||"";
-  $("content").innerHTML=`<div class="toolbar">
-    <div style="min-width:180px"><label class="mini">Examination</label><select id="mkExam" onchange="loadMarksGrid()">${S.exams.map(e=>`<option value="${e.id}">${esc(e.name||e.exam_name||e.title)}</option>`).join("")}</select></div>
-    <div style="min-width:140px"><label class="mini">Class</label><select id="mkClass" onchange="loadMarksGrid()">${S.classes.map(c=>`<option value="${c.id}" ${c.id===cls?"selected":""}>${esc(c.name)}</option>`).join("")}</select></div>
-    <div style="min-width:180px"><label class="mini">Subject</label><select id="mkSubject" onchange="loadMarksGrid()">${S.subjects.map(s=>`<option value="${s.id}">${esc(s.name||s.subject_name)}</option>`).join("")}</select></div>
-  </div>
-  <div id="marksGrid"><div class="card">Select examination, class and subject.</div></div>`;
-  loadMarksGrid();
+ await loadLookups();let classes=state.classes,subjects=state.subjects;
+ if(!isAdmin()){const mine=state.assignments.filter(a=>a.teacher_id===state.user.id&&a.active!==false);classes=classes.filter(c=>mine.some(a=>a.class_id===c.id));subjects=subjects.filter(s=>mine.some(a=>a.subject_id===s.id))}
+ if(!classes.length){$("content").innerHTML='<div class="card empty">No class/subject assignment is available for this teacher.</div>';return}
+ $("content").innerHTML=`<div class="card"><div class="form-grid"><div class="field"><label>Examination</label><select id="m_exam" onchange="loadMarksGrid()">${state.exams.map(x=>`<option value="${x.id}">${esc(x.name)} — ${esc(x.academic_year)}</option>`).join("")}</select></div><div class="field"><label>Class</label><select id="m_class" onchange="marksSectionOptions()">${classes.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join("")}</select></div><div class="field"><label>Section</label><select id="m_section" onchange="loadMarksGrid()"></select></div><div class="field"><label>Subject</label><select id="m_subject" onchange="loadMarksGrid()">${subjects.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join("")}</select></div></div></div><div id="marksGrid" style="margin-top:14px"></div>`;
+ marksSectionOptions();
 }
+function marksSectionOptions(){const list=sectionsFor($("m_class").value);$("m_section").innerHTML=list.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join("");loadMarksGrid()}
 async function loadMarksGrid(){
-  const ex=$("mkExam")?.value,cl=$("mkClass")?.value,sub=$("mkSubject")?.value;
-  if(!ex||!cl||!sub){$("marksGrid").innerHTML='<div class="card">Create an examination and select all three options.</div>';return}
-  const er=S.exams.find(x=>x.id===ex), students=S.students.filter(x=>x.class_id===cl);
-  const mr=await S.sb.from("student_exam_marks").select("*").eq("examination_id",ex).eq("subject_id",sub);
-  if(mr.error){$("marksGrid").innerHTML=`<div class="card"><div class="err">${esc(mr.error.message)}</div><div class="mini">Run the supplied Academic Setup SQL once in Supabase.</div></div>`;return}
-  const map=Object.fromEntries((mr.data||[]).map(x=>[x.student_id,x]));
-  $("marksGrid").innerHTML=`<div class="notice"><b>${esc(er?.name||"Examination")}</b> • ${esc(SUB(sub))} • Maximum Marks: ${esc(er?.max_marks||"")}</div>
-  ${tbl(["Roll","Admission","Student","Section","Marks","Remarks"],students.map(st=>{
-    const m=map[st.id]||{};
-    return `<tr><td>${esc(st.roll_no)}</td><td>${esc(st.admission_no)}</td><td><b>${esc(st.full_name)}</b></td><td>${SEC(st.section_id)}</td>
-    <td><input class="marks-table-input" id="mark_${st.id}" type="number" min="0" max="${er?.max_marks||999}" step="0.01" value="${m.marks??""}" style="width:100px;padding:8px;border:1px solid var(--line);border-radius:8px"></td>
-    <td><input id="remark_${st.id}" value="${esc(m.remarks||"")}" style="width:180px;padding:8px;border:1px solid var(--line);border-radius:8px"></td></tr>`;
-  }).join(""))}
-  <button class="primary" onclick="saveMarksGrid()">Save All Marks</button>`;
+ const ex=$("m_exam")?.value,cl=$("m_class")?.value,se=$("m_section")?.value,sub=$("m_subject")?.value;if(!ex||!cl||!se||!sub)return;
+ if(!teacherAllowed(sub,cl,se)){$("marksGrid").innerHTML='<div class="card empty">Teacher is not assigned to this subject/class/section.</div>';return}
+ const students=state.students.filter(s=>s.class_id===cl&&s.section_id===se).sort((a,b)=>String(a.roll_no).localeCompare(String(b.roll_no),undefined,{numeric:true}));
+ const mr=await state.sb.from("marks").select("*").eq("examination_id",ex).eq("subject_id",sub);if(mr.error){$("marksGrid").innerHTML=`<div class="card err">${esc(mr.error.message)}</div>`;return}
+ const map=new Map((mr.data||[]).map(x=>[x.student_id,x]));
+ $("marksGrid").innerHTML=`<div class="section-title"><h3>${esc(subjectName(sub))} — ${esc(className(cl))} ${esc(sectionName(se))}</h3><div><button class="secondary" onclick="saveMarks(false)">Save Draft</button><button class="primary" style="margin-left:6px" onclick="saveMarks(true)">Submit Marks</button></div></div><div class="table-wrap marks-table"><table class="table"><thead><tr><th>Roll</th><th>Admission</th><th>Student</th><th>Max</th><th>Marks</th><th>Attendance</th><th>Status</th></tr></thead><tbody>${students.map(s=>{const m=map.get(s.id);return `<tr><td>${esc(s.roll_no)}</td><td>${esc(s.admission_no)}</td><td>${esc(s.full_name)}</td><td><input class="maxmark" data-id="${s.id}" type="number" value="${m?.max_marks??100}" min="0"></td><td><input class="markval" data-id="${s.id}" type="number" value="${m?.marks??""}" min="0"></td><td><select class="attval" data-id="${s.id}"><option ${!m||m.attendance_status==="Present"?"selected":""}>Present</option><option ${m?.attendance_status==="Absent"?"selected":""}>Absent</option></select></td><td>${m?.status?`<span class="badge ${m.status==="submitted"?"":"warn"}">${esc(m.status)}</span>`:"<span class='badge'>New</span>"}</td></tr>`}).join("")}</tbody></table></div>`;
 }
-async function saveMarksGrid(){
-  const ex=$("mkExam").value,cl=$("mkClass").value,sub=$("mkSubject").value;
-  const er=S.exams.find(x=>x.id===ex), students=S.students.filter(x=>x.class_id===cl);
-  const rows=[];
-  for(const st of students){
-    const raw=$("mark_"+st.id)?.value;
-    const remark=$("remark_"+st.id)?.value||"";
-    if(raw==="" && !remark)continue;
-    const marks=raw===""?null:Number(raw);
-    if(marks!==null && (marks<0 || marks>Number(er?.max_marks||999)))return toast(`Invalid marks for ${st.full_name}`,false);
-    rows.push({student_id:st.id,examination_id:ex,subject_id:sub,marks,max_marks:Number(er?.max_marks||0),remarks:remark});
-  }
-  if(!rows.length)return toast("No marks entered",false);
-  const r=await S.sb.from("student_exam_marks").upsert(rows,{onConflict:"student_id,examination_id,subject_id"});
-  if(r.error)return toast(r.error.message,false);
-  toast(rows.length+" student marks saved");loadMarksGrid();
+async function saveMarks(submit){
+ const ex=$("m_exam").value,sub=$("m_subject").value,ids=[...document.querySelectorAll(".markval")].map(e=>e.dataset.id),rows=[];
+ for(const id of ids){const markEl=document.querySelector(`.markval[data-id="${id}"]`),maxEl=document.querySelector(`.maxmark[data-id="${id}"]`),att=document.querySelector(`.attval[data-id="${id}"]`);const raw=markEl.value.trim();if(raw===""&&att.value==="Present")continue;const marks=raw===""?0:Number(raw),max_marks=Number(maxEl.value)||100;if(marks<0||marks>max_marks){toast("Invalid marks",false);return}rows.push({examination_id:ex,subject_id:sub,student_id:id,marks,max_marks,attendance_status:att.value,status:submit?"submitted":"draft",entered_by:state.user.id,entered_at:new Date().toISOString(),updated_at:new Date().toISOString()})}
+ if(!rows.length){toast("No marks entered",false);return}
+ for(const row of rows){const old=await state.sb.from("marks").select("id").eq("examination_id",row.examination_id).eq("subject_id",row.subject_id).eq("student_id",row.student_id).maybeSingle();if(old.error){toast(old.error.message,false);return}const r=old.data?await state.sb.from("marks").update(row).eq("id",old.data.id):await state.sb.from("marks").insert(row);if(r.error){toast("Save failed: "+r.error.message,false);return}}
+ toast(`${rows.length} marks ${submit?"submitted":"saved"}`);loadMarksGrid();
 }
+
+async function attendance(){
+ await loadLookups();
+ $("content").innerHTML=`<div class="card"><div class="form-grid"><div class="field"><label>Class</label><select id="at_class" onchange="attendanceSectionOptions()">${state.classes.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join("")}</select></div><div class="field"><label>Section</label><select id="at_section" onchange="loadAttendanceGrid()"></select></div><div class="field"><label>Term</label><select id="at_term" onchange="loadAttendanceGrid()"><option>Term-1</option><option>Term-2</option></select></div><div class="field"><label>Date</label><input id="at_date" type="date" value="${new Date().toISOString().slice(0,10)}" onchange="loadAttendanceGrid()"></div></div></div><div id="attendanceGrid" style="margin-top:14px"></div>`;
+ attendanceSectionOptions();
+}
+function attendanceSectionOptions(){$("at_section").innerHTML=sectionsFor($("at_class").value).map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join("");loadAttendanceGrid()}
+async function loadAttendanceGrid(){
+ const cl=$("at_class")?.value,se=$("at_section")?.value,term=$("at_term")?.value,date=$("at_date")?.value;if(!cl||!se||!date)return;
+ const st=state.students.filter(s=>s.class_id===cl&&s.section_id===se).sort((a,b)=>String(a.roll_no).localeCompare(String(b.roll_no),undefined,{numeric:true}));
+ const r=await state.sb.from("attendance_records").select("*").eq("academic_year",YEAR).eq("term",term).eq("attendance_date",date);if(r.error){$("attendanceGrid").innerHTML=`<div class="card err">${esc(r.error.message)}</div>`;return}
+ const map=new Map((r.data||[]).map(x=>[x.student_id,x]));
+ $("attendanceGrid").innerHTML=`<div class="section-title"><h3>Attendance — ${esc(className(cl))} ${esc(sectionName(se))}</h3><div><button class="secondary" onclick="markAllAttendance('Present')">Mark All Present</button><button class="primary" onclick="saveAttendance()">Save Attendance</button></div></div><div class="table-wrap"><table class="table"><thead><tr><th>Roll</th><th>Admission</th><th>Student</th><th>Status</th><th>Remarks</th><th>Action</th></tr></thead><tbody>${st.map(s=>{const a=map.get(s.id);return `<tr><td>${esc(s.roll_no)}</td><td>${esc(s.admission_no)}</td><td>${esc(s.full_name)}</td><td><select class="attendance-status" data-id="${s.id}"><option ${!a||a.status==="Present"?"selected":""}>Present</option><option ${a?.status==="Absent"?"selected":""}>Absent</option><option ${a?.status==="Leave"?"selected":""}>Leave</option></select></td><td><input class="attendance-remark" data-id="${s.id}" value="${esc(a?.remarks)}"></td><td>${a?`<button class="danger" onclick="deleteAttendance('${a.id}')">Delete</button>`:""}</td></tr>`}).join("")}</tbody></table></div>`;
+}
+function markAllAttendance(v){document.querySelectorAll(".attendance-status").forEach(x=>x.value=v)}
+async function saveAttendance(){
+ const date=$("at_date").value,term=$("at_term").value,items=[...document.querySelectorAll(".attendance-status")];if(!items.length){toast("No students found",false);return}
+ for(const el of items){const id=el.dataset.id,remark=document.querySelector(`.attendance-remark[data-id="${id}"]`)?.value||null;const old=await state.sb.from("attendance_records").select("id").eq("student_id",id).eq("academic_year",YEAR).eq("term",term).eq("attendance_date",date).maybeSingle();if(old.error){toast(old.error.message,false);return}const row={student_id:id,academic_year:YEAR,term,attendance_date:date,status:el.value,remarks:remark,created_by:state.user.id,updated_at:new Date().toISOString()};const r=old.data?await state.sb.from("attendance_records").update(row).eq("id",old.data.id):await state.sb.from("attendance_records").insert(row);if(r.error){toast(r.error.message,false);return}}
+ toast("Attendance saved");loadAttendanceGrid();
+}
+async function deleteAttendance(id){if(!confirm("Delete attendance record?"))return;const r=await state.sb.from("attendance_records").delete().eq("id",id);if(r.error){toast(r.error.message,false);return}toast("Attendance deleted");loadAttendanceGrid()}
+
+async function coscholastic(){
+ await loadLookups();
+ $("content").innerHTML=`<div class="card"><div class="form-grid"><div class="field"><label>Class</label><select id="co_class" onchange="coSectionOptions()">${state.classes.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join("")}</select></div><div class="field"><label>Section</label><select id="co_section" onchange="loadCoGrid()"></select></div></div></div><div id="coGrid" style="margin-top:14px"></div>`;
+ coSectionOptions();
+}
+function coSectionOptions(){$("co_section").innerHTML=sectionsFor($("co_class").value).map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join("");loadCoGrid()}
+async function loadCoGrid(){
+ const cl=$("co_class")?.value,se=$("co_section")?.value;if(!cl||!se)return;
+ const st=state.students.filter(s=>s.class_id===cl&&s.section_id===se);const r=await state.sb.from("co_scholastic").select("*").eq("academic_year",YEAR);if(r.error){$("coGrid").innerHTML=`<div class="card err">${esc(r.error.message)}</div>`;return}
+ const map=new Map((r.data||[]).map(x=>[x.student_id,x]));
+ $("coGrid").innerHTML=`<div class="table-wrap"><table class="table"><thead><tr><th>Roll</th><th>Student</th><th>Work Education</th><th>Art Education</th><th>Health & Physical</th><th>Discipline</th><th>CCA</th><th>Yoga</th><th>Sports</th><th>Health Status</th><th>Action</th></tr></thead><tbody>${st.map(s=>{const x=map.get(s.id)||{};return `<tr><td>${esc(s.roll_no)}</td><td>${esc(s.full_name)}</td>${["work_education","art_education","health_physical_education","discipline","cca","yoga","sports","health_status"].map(k=>`<td><select class="co-val" data-student="${s.id}" data-field="${k}"><option value="">—</option>${["A","B","C","D","E"].map(g=>`<option ${x[k]===g?"selected":""}>${g}</option>`).join("")}</select></td>`).join("")}<td><button class="primary" onclick="saveCo('${s.id}')">Save</button>${x.id?`<button class="danger" onclick="deleteCo('${x.id}')">Delete</button>`:""}</td></tr>`}).join("")}</tbody></table></div>`;
+}
+async function saveCo(studentId){
+ const row={student_id:studentId,academic_year:YEAR};document.querySelectorAll(`.co-val[data-student="${studentId}"]`).forEach(x=>row[x.dataset.field]=x.value||null);
+ const old=await state.sb.from("co_scholastic").select("id").eq("student_id",studentId).eq("academic_year",YEAR).maybeSingle();if(old.error){toast(old.error.message,false);return}
+ const r=old.data?await state.sb.from("co_scholastic").update(row).eq("id",old.data.id):await state.sb.from("co_scholastic").insert(row);if(r.error){toast(r.error.message,false);return}toast("Co-Scholastic grades saved");loadCoGrid();
+}
+async function deleteCo(id){if(!confirm("Delete co-scholastic record?"))return;const r=await state.sb.from("co_scholastic").delete().eq("id",id);if(r.error){toast(r.error.message,false);return}toast("Deleted");loadCoGrid()}
+
+async function results(){
+ await loadLookups();if(!state.exams.length){$("content").innerHTML='<div class="card empty">Create an examination first.</div>';return}
+ $("content").innerHTML=`<div class="card"><div class="form-grid"><div class="field"><label>Examination</label><select id="r_exam" onchange="buildResults()">${state.exams.map(x=>`<option value="${x.id}">${esc(x.name)} — ${esc(x.academic_year)}</option>`).join("")}</select></div><div class="field"><label>Class</label><select id="r_class" onchange="resultSectionOptions()"><option value="">All Classes</option>${state.classes.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join("")}</select></div><div class="field"><label>Section</label><select id="r_section" onchange="buildResults()"><option value="">All Sections</option></select></div></div></div><div id="resultTable" style="margin-top:14px"></div>`;
+ resultSectionOptions();
+}
+function resultSectionOptions(){const c=$("r_class").value;$("r_section").innerHTML='<option value="">All Sections</option>'+state.sections.filter(s=>!c||s.class_id===c).map(s=>`<option value="${s.id}">${esc(s.name)} — ${esc(className(s.class_id))}</option>`).join("");buildResults()}
+function grade(p){return p>=90?"A1":p>=80?"A2":p>=70?"B1":p>=60?"B2":p>=50?"C":p>=40?"D":p>=33?"E":"F"}
+async function buildResults(){
+ const ex=$("r_exam").value,cl=$("r_class").value,se=$("r_section").value;let st=state.students.filter(s=>(!cl||s.class_id===cl)&&(!se||s.section_id===se));
+ if(!isAdmin())st=st.filter(s=>state.assignments.some(a=>a.teacher_id===state.user.id&&a.class_id===s.class_id&&a.section_id===s.section_id&&a.active!==false));
+ const mr=await state.sb.from("marks").select("student_id,marks,max_marks,subject_id,status,attendance_status").eq("examination_id",ex);if(mr.error)throw mr.error;
+ const by=new Map();(mr.data||[]).forEach(m=>{if(!by.has(m.student_id))by.set(m.student_id,[]);by.get(m.student_id).push(m)});
+ const rows=st.map(s=>{const a=by.get(s.id)||[],ev=a.filter(m=>m.attendance_status!=="Absent"),total=ev.reduce((x,m)=>x+(Number(m.marks)||0),0),max=ev.reduce((x,m)=>x+(Number(m.max_marks)||100),0),pct=max?total/max*100:0;return {...s,total,max,pct,grade:grade(pct),status:pct>=33?"PASS":"FAIL",entered:a.length}}).sort((a,b)=>b.pct-a.pct);
+ rows.forEach((r,i)=>r.rank=r.pct>0?i+1:"—");state.resultRows=rows;
+ $("resultTable").innerHTML=`<div class="toolbar"><button class="secondary" onclick="exportResults()">⇩ Export CSV</button></div><div class="table-wrap"><table class="table"><thead><tr><th>Rank</th><th>Roll</th><th>Name</th><th>Subjects</th><th>Total</th><th>%</th><th>Grade</th><th>Result</th><th>Action</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${r.rank}</td><td>${esc(r.roll_no)}</td><td>${esc(r.full_name)}</td><td>${r.entered}</td><td>${r.total}/${r.max}</td><td>${r.pct.toFixed(2)}</td><td>${r.grade}</td><td><span class="badge ${r.status==="FAIL"?"danger":""}">${r.status}</span></td><td><button class="secondary" onclick="openReport('${r.id}','${ex}')">Report Card</button></td></tr>`).join("")}</tbody></table></div>`;
+}
+function exportResults(){const rows=state.resultRows||[];const csv=["Rank,Roll,Admission,Name,Total,Max,Percentage,Grade,Status",...rows.map(r=>[r.rank,r.roll_no,r.admission_no,`"${String(r.full_name).replaceAll('"','""')}"`,r.total,r.max,r.pct.toFixed(2),r.grade,r.status].join(","))].join("\n");const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download="JNV_Consolidated_Result.csv";a.click()}
+
+async function reports(){
+ await loadLookups();if(!state.students.length){$("content").innerHTML='<div class="card empty">Add students first.</div>';return}
+ $("content").innerHTML=`<div class="card"><div class="form-grid"><div class="field"><label>Class</label><select id="rp_class" onchange="reportStudentOptions()">${state.classes.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join("")}</select></div><div class="field"><label>Student</label><select id="rp_student"></select></div><div class="field"><label>Examination</label><select id="rp_exam">${state.exams.map(e=>`<option value="${e.id}">${esc(e.name)} — ${esc(e.academic_year)}</option>`).join("")}</select></div></div><button class="primary" onclick="openReport($('rp_student').value,$('rp_exam').value)">View Report Card</button></div><div id="reportArea" style="margin-top:14px"></div>`;
+ reportStudentOptions();
+}
+function reportStudentOptions(){const c=$("rp_class").value;$("rp_student").innerHTML=state.students.filter(s=>s.class_id===c).map(s=>`<option value="${s.id}">${esc(s.roll_no)} - ${esc(s.full_name)}</option>`).join("")}
+async function openReport(studentId,examId){
+ const s=state.students.find(x=>x.id===studentId);if(!s)return;
+ const ex=state.exams.find(x=>x.id===examId),mr=await state.sb.from("marks").select("*").eq("examination_id",examId).eq("student_id",studentId);if(mr.error){toast(mr.error.message,false);return}
+ const coR=await state.sb.from("co_scholastic").select("*").eq("academic_year",YEAR).eq("student_id",studentId).maybeSingle(),co=coR.data||{};
+ const atR=await state.sb.from("attendance_records").select("term,status").eq("academic_year",YEAR).eq("student_id",studentId),att=atR.data||[];
+ const termStats=["Term-1","Term-2"].map(term=>{const a=att.filter(x=>x.term===term),total=a.length,present=a.filter(x=>x.status==="Present").length;return{term,total,present,pct:total?present/total*100:null}});
+ const rows=mr.data||[],ev=rows.filter(x=>x.attendance_status!=="Absent"),total=ev.reduce((a,x)=>a+(Number(x.marks)||0),0),max=ev.reduce((a,x)=>a+(Number(x.max_marks)||100),0),pct=max?total/max*100:0,rank=(state.resultRows.find(x=>x.id===studentId)||{}).rank||"—";
+ $("reportArea").innerHTML=`<div class="report-card" id="printReport"><div class="report-head"><div>${imgOrPlaceholder(state.settings.logo_left,"Logo")}</div><div><div class="report-title">${esc(schoolName())}</div><div style="font-weight:750">REPORT CARD FOR CLASS ${esc(className(s.class_id))}</div><div>ACADEMIC SESSION: ${YEAR}</div></div><div>${imgOrPlaceholder(state.settings.logo_right,"PM SHRI")}</div></div>
+ <hr><div style="display:grid;grid-template-columns:1fr 110px;gap:15px;align-items:start"><div><b>Roll No:</b> ${esc(s.roll_no)}<br><b>Student's Name:</b> ${esc(s.full_name)}<br><b>Name of the Mother:</b> ${esc(s.mother_name)}<br><b>Date of Birth:</b> ${esc(s.dob)}<br><b>APAAR ID:</b> ${esc(s.apaar_id)}<br><b>Name of the Father:</b> ${esc(s.father_name)}<br><b>Section:</b> ${esc(sectionName(s.section_id))}<br><b>House:</b> ${esc(s.house)}</div><div>${s.photo_url?`<img class="student-photo" src="${esc(s.photo_url)}" alt="Student Photo">`:'<div class="student-photo" style="display:grid;place-items:center;font-size:11px">Student Photo</div>'}</div></div>
+ <h4>Part A: Scholastic Area</h4><table class="report-table"><thead><tr><th>Subject Name</th><th>Term-1</th><th>Term-2</th><th>Total</th><th>Overall Grade</th></tr></thead><tbody>${rows.map(m=>`<tr><td>${esc(subjectName(m.subject_id))}</td><td>${esc(m.marks??"—")}</td><td>—</td><td>${esc(m.marks??"—")}</td><td>${grade(Number(m.max_marks)?Number(m.marks||0)/Number(m.max_marks)*100:0)}</td></tr>`).join("")}<tr><th>Total</th><th>${total}</th><th>—</th><th>${total}/${max}</th><th>${grade(pct)}</th></tr></tbody></table>
+ <h4>Part B: Co-Scholastic Area (Grade)</h4><table class="report-table"><thead><tr><th>Co-Scholastic Area</th><th>Annual Grade</th></tr></thead><tbody>${[["Work Education","work_education"],["Art Education","art_education"],["Health & Physical Education","health_physical_education"],["Discipline","discipline"],["Co-Curricular Activities (CCA)","cca"],["Yoga","yoga"],["Sports","sports"],["Health Status","health_status"]].map(a=>`<tr><td>${a[0]}</td><td>${esc(co[a[1]]||"—")}</td></tr>`).join("")}</tbody></table>
+ <h4>Part C: 10 Bagless Days</h4><table class="report-table"><tr><td>Participation (Yes/No)</td><td>During vacation: —</td><td>During school: —</td></tr></table>
+ <h4>Part D: Discipline (03-point grading scale A, B, C)</h4><table class="report-table"><tr><td>Discipline</td><td>${esc(co.discipline||"—")}</td></tr></table>
+ <h4>Part E: General Studies</h4><table class="report-table"><tr><td>Co-Scholastic Areas</td><td>Overall: —</td></tr><tr><td>General Studies</td><td>—</td></tr></table>
+ <h4>Part F: Any Outstanding Achievement during the session</h4><div style="border-bottom:1px solid #777;height:30px"></div>
+ <h4>Part G: Attendance</h4><table class="report-table"><thead><tr><th>Term</th><th>Total Working Days</th><th>Number of Days Attended</th><th>% Attendance</th></tr></thead><tbody>${termStats.map(a=>`<tr><td>${a.term}</td><td>${a.total||"—"}</td><td>${a.present||"—"}</td><td>${a.pct==null?"—":a.pct.toFixed(1)+"%"}</td></tr>`).join("")}</tbody></table>
+ <div style="margin-top:12px;font-size:11px"><b>Result:</b> ${pct>=33?"PASS":"FAIL"} &nbsp; <b>Percentage:</b> ${pct.toFixed(2)}% &nbsp; <b>Grade:</b> ${grade(pct)} &nbsp; <b>Rank:</b> ${rank}</div>
+ <div class="signatures"><div><div style="height:55px">${state.settings.vp_signature?`<img src="${esc(state.settings.vp_signature)}" style="max-height:50px;max-width:150px">`:""}</div><div class="sig-line">Signature of Vice Principal</div></div><div><div style="height:55px">${state.settings.principal_signature?`<img src="${esc(state.settings.principal_signature)}" style="max-height:50px;max-width:150px">`:""}</div><div class="sig-line">Signature of Principal</div></div></div>
+ <div class="report-actions"><button class="primary" onclick="printReport()">Print Report Card</button><button class="secondary" onclick="downloadReportPDF()">Download PDF</button></div></div>`;
+}
+function printReport(){const html=$("printReport")?.outerHTML;if(!html)return;const w=window.open("","_blank");w.document.write(`<html><head><title>Report Card</title><style>body{font-family:Arial;padding:20px}.report-card{max-width:900px;margin:auto}.report-table{width:100%;border-collapse:collapse}.report-table th,.report-table td{border:1px solid #777;padding:5px;font-size:11px}.report-head{display:grid;grid-template-columns:100px 1fr 100px;align-items:center;text-align:center}.report-head img{max-width:90px;max-height:90px}.student-photo{width:92px;height:110px;object-fit:cover;border:1px solid #777}.signatures{display:grid;grid-template-columns:1fr 1fr;gap:70px;margin-top:38px;text-align:center}.sig-line{border-top:1px solid #555;padding-top:7px}.report-actions{display:none}</style></head><body>${html}</body></html>`);w.document.close();w.print()}
+function downloadReportPDF(){printReport()}
+
+async function settingsPage(){
+ if(!isAdmin()){toast("Admin access required",false);return}
+ $("content").innerHTML=`<div class="card"><div class="section-title"><h3>School Name & Report Card Branding</h3></div><div class="field"><label>School Name</label><input id="set_school" value="${esc(schoolName())}"></div><div class="branding-preview"><div><b>Top Left Logo</b><div class="logo-box">${imgOrPlaceholder(state.settings.logo_left,"Logo")}</div><input id="set_left" type="file" accept="image/*" style="margin-top:8px"></div><div><b>Student Photo</b><div class="logo-box">Uploaded in Student record</div></div><div><b>Top Right Logo</b><div class="logo-box">${imgOrPlaceholder(state.settings.logo_right,"PM SHRI")}</div><input id="set_right" type="file" accept="image/*" style="margin-top:8px"></div></div>
+ <div class="form-grid" style="margin-top:20px"><div class="field"><label>Vice Principal Signature Image URL</label><input id="set_vp" value="${esc(state.settings.vp_signature)}"></div><div class="field"><label>Principal Signature Image URL</label><input id="set_pr" value="${esc(state.settings.principal_signature)}"></div></div>
+ <div class="notice">Report card order: <b>Vice Principal signature on the left and Principal signature on the right</b>. Student photo is beside the APAAR/details block.</div>
+ <button class="primary" onclick="saveSettings()">Save Branding Settings</button></div>`;
+}
+async function saveSettings(){
+ let left=state.settings.logo_left,right=state.settings.logo_right;
+ for(const id of ["set_left","set_right"]){const f=$(id).files[0];if(f){const data=await fileToDataURL(f);if(id==="set_left")left=data;else right=data}}
+ const row={school_name:$("set_school").value.trim()||DEFAULT_SCHOOL,logo_left:left,logo_right:right,vp_signature:$("set_vp").value.trim()||"",principal_signature:$("set_pr").value.trim()||""};
+ const old=await state.sb.from("school_settings").select("id").limit(1).maybeSingle();
+ const r=old.data?.id?await state.sb.from("school_settings").update(row).eq("id",old.data.id):await state.sb.from("school_settings").insert(row);
+ if(r.error){toast("Branding save failed: "+r.error.message,false);return}
+ state.settings={...state.settings,...row};renderShell();await go("settings");toast("School branding saved");
+}
+function fileToDataURL(f){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(f)})}
+function closeModal(){$("modal").innerHTML=""}
+init();
 </script>
 </body>
 </html>
