@@ -55,6 +55,32 @@ button,input,select,textarea{font:inherit}button{cursor:pointer}.hidden{display:
 @media print{.side,.top,.toolbar,.no-print{display:none!important}.main{margin:0;width:100%;padding:5px}.report{border:0;box-shadow:none;max-width:none}.report-card-print{display:block}}
 
 .branding-preview{display:block;width:100px;height:80px;object-fit:contain;border:1px solid var(--line);border-radius:8px;margin-top:8px;background:#fff}.signature-preview{display:block;max-width:220px;height:60px;object-fit:contain;border:1px solid var(--line);border-radius:8px;margin-top:8px;background:#fff}.report-logo img{width:100%;height:100%;object-fit:contain}.vp-sign{width:250px;margin:35px auto 0;text-align:center}.vp-sign-img{height:55px;display:flex;align-items:flex-end;justify-content:center}.vp-sign-img img{max-width:190px;max-height:55px;object-fit:contain}.vp-sign-line{border-top:1px solid #555;padding-top:5px;font-size:11px}.
+
+.report-student-photo{
+  position:absolute;
+  right:118px;
+  top:18px;
+  width:78px;
+  height:92px;
+  border:1px solid #888;
+  background:#fff;
+  display:grid;
+  place-items:center;
+  overflow:hidden;
+  font-size:10px;
+  color:#777;
+  text-align:center;
+}
+.report-student-photo img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+.vp-sign{
+  width:260px;
+  margin:34px 0 0 auto;
+  text-align:center;
+}
 </style>
 </head>
 <body><div id="root"></div>
@@ -403,7 +429,11 @@ async function showReport(){
  <div><b>Name of the Mother:</b> ${esc(st.mother_name)}</div><div><b>Name of the Father:</b> ${esc(st.father_name)}</div>
  <div><b>Date of Birth:</b> ${esc(st.date_of_birth||"")}</div><div><b>House:</b> ${esc(st.house||"")}</div>
  </div>
- <div class="part-title">Part A: Scholastic Area</div>
+ <div class="part-title">
+<div class="report-student-photo">
+  ${getStudentPhoto(st.id)?`<img src="${getStudentPhoto(st.id)}" alt="Student Photo">`:'<span>Photograph</span>'}
+</div>
+Part A: Scholastic Area</div>
  <div class="table-wrap"><table><thead><tr><th>Subject Name</th><th>Term-1</th><th>Term-2</th><th>Total</th><th>Overall Grade</th></tr></thead><tbody>${rows||'<tr><td colspan="5">No marks found in the supported marks tables.</td></tr>'}</tbody></table></div>
  <div class="part-title">Part B: Co-Scholastic Area (Grade)</div>
  <table><thead><tr><th>Co-Scholastic Area</th><th>Annual Grade</th></tr></thead><tbody>${coRows(co)}</tbody></table>
@@ -418,7 +448,7 @@ async function showReport(){
  <div class="part-title">Part G: Attendance</div>
  <table><thead><tr><th>Term</th><th>Total Working Days</th><th>Number of Days Attended</th><th>% Attendance</th></tr></thead>
  <tbody><tr><td>Term-1</td><td>—</td><td>—</td><td>—</td></tr><tr><td>Term-2</td><td>—</td><td>—</td><td>—</td></tr></tbody></table>
- <div class="sign"><div>Signature of Class Teacher</div><div>Signature of Principal</div></div><div class="vp-sign"><div class="vp-sign-img">${getImage(MEDIA_KEYS.vpSignature)?`<img src="${getImage(MEDIA_KEYS.vpSignature)}" alt="Vice Principal Signature">`:""}</div><div class="vp-sign-line">Signature of Vice Principal</div></div>
+ <div class="sign"><div>Signature of Class Teacher</div><div>Signature of Vice Principal</div></div><div class="vp-sign"><div class="vp-sign-img">${getImage(MEDIA_KEYS.vpSignature)?`<img src="${getImage(MEDIA_KEYS.vpSignature)}" alt="Vice Principal Signature">`:""}</div><div class="vp-sign-line">Signature of Principal</div></div>
  <div class="small-note" style="margin-top:20px"><b>Grading Scale for Co-scholastic Areas:</b> A — Exemplary, B — Proficient, C — Developing, D — Emerging, E — Beginner.</div>
  <div class="small-note" style="margin-top:8px"><b>Grading Scale for Discipline:</b> A — Outstanding, B — Very Good, C — Fair.</div>
  </div>
