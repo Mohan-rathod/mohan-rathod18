@@ -483,5 +483,291 @@ function saveSchoolName(){
   location.reload();
 }
 </script>
+
+<script>
+/* ==========================================================
+   V7 ACADEMIC SETUP
+   Classes/Sections + Subject Choices + Teacher Assignments
+   Class Teachers + Examination Creation + Marks Entry
+   ========================================================== */
+
+async function createClassForm(){
+  modal("Add Class",`<div class="form-grid">
+    <div class="field wide"><label>Class Name</label><input id="newClassName" placeholder="e.g. VI"></div>
+    <div class="field"><label>Display Order</label><input id="newClassOrder" type="number" value="1"></div>
+    <div class="field"><label>Active</label><select id="newClassActive"><option value="true">Yes</option><option value="false">No</option></select></div>
+  </div><button class="primary full" onclick="createClass()">Save Class</button>`);
+}
+async function createClass(){
+  const name=$("newClassName").value.trim();
+  if(!name)return toast("Enter class name",false);
+  const r=await S.sb.from("classes").insert({
+    name,display_order:Number($("newClassOrder").value||0),
+    active:$("newClassActive").value==="true"
+  });
+  if(r.error)return toast(r.error.message,false);
+  closeModal();toast("Class created");await go("classes");
+}
+async function createSectionForm(){
+  await lookups();
+  modal("Add Section",`<div class="form-grid">
+    <div class="field"><label>Class</label><select id="newSectionClass">${S.classes.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join("")}</select></div>
+    <div class="field"><label>Section Name</label><input id="newSectionName" placeholder="A"></div>
+    <div class="field"><label>Active</label><select id="newSectionActive"><option value="true">Yes</option><option value="false">No</option></select></div>
+  </div><button class="primary full" onclick="createSection()">Save Section</button>`);
+}
+async function createSection(){
+  const r=await S.sb.from("sections").insert({
+    class_id:$("newSectionClass").value,
+    name:$("newSectionName").value.trim(),
+    active:$("newSectionActive").value==="true"
+  });
+  if(r.error)return toast(r.error.message,false);
+  closeModal();toast("Section created");await go("classes");
+}
+
+async function classes(){
+  await lookups();
+  const ct=await S.sb.from("class_teacher_assignments").select("*").eq("academic_year",YEAR);
+  const cta=ct.data||[];
+  const ctRows=cta.map(x=>`<tr>
+    <td>${C(x.class_id)}</td><td>${SEC(x.section_id)}</td><td>${TC(x.teacher_id)}</td>
+    <td><button class="danger" onclick="deleteSimple('class_teacher_assignments','${x.id}','Class Teacher Assignment')">Delete</button></td>
+  </tr>`).join("");
+
+  $("content").innerHTML=`
+  <div class="section-title"><h3>Classes</h3><div class="actions">
+    <button class="primary" onclick="createClassForm()">+ Add Class</button>
+    ${bulkControls("classes","Class",["name","display_order","active"],[["VI",6,true]])}
+  </div></div>
+  ${tbl(["Class","Order","Active","Action"],S.classes.map(x=>`<tr>
+    <td><b>${esc(x.name)}</b></td><td>${x.display_order??""}</td><td>${x.active===false?"No":"Yes"}</td>
+    <td class="actions"><button class="secondary" onclick="editSimple('classes','${x.id}','Class',[["name","Class Name"],["display_order","Display Order","number"],["active","Active"]])">Edit</button>
+    <button class="danger" onclick="deleteSimple('classes','${x.id}','Class')">Delete</button></td>
+  </tr>`).join(""))}
+
+  <div class="section-title"><h3>Sections</h3><div class="actions">
+    <button class="primary" onclick="createSectionForm()">+ Add Section</button>
+    ${bulkControls("sections","Section",["class_id","name","active"],[["CLASS_ID","A",true]])}
+  </div></div>
+  <div class="notice">For bulk sections, first create the classes. The <b>class_id</b> column must contain the UUID shown by Supabase for that class.</div>
+  ${tbl(["Class","Section","Active","Action"],S.sections.map(x=>`<tr>
+    <td>${C(x.class_id)}</td><td>${esc(x.name)}</td><td>${x.active===false?"No":"Yes"}</td>
+    <td class="actions"><button class="secondary" onclick="editSimple('sections','${x.id}','Section',[["class_id","Class ID"],["name","Section Name"],["active","Active"]])">Edit</button>
+    <button class="danger" onclick="deleteSimple('sections','${x.id}','Section')">Delete</button></td>
+  </tr>`).join(""))}
+
+  <div class="section-title"><h3>Class Teacher Assignment</h3>
+    <button class="primary" onclick="classTeacherForm()">+ Assign Class Teacher</button>
+  </div>
+  <div class="notice">One class teacher is assigned to each Class + Section for ${YEAR}. You can edit/delete the assignment.</div>
+  ${tbl(["Class","Section","Class Teacher","Action"],ctRows)}
+
+  <div class="section-title"><h3>Individual Student Subject Choice</h3>
+    <button class="primary" onclick="studentChoiceForm()">+ Assign Student Subjects</button>
+  </div>
+  <div class="notice">Use this for optional/elective subjects. Each student can have a different subject combination.</div>
+  <button class="secondary" onclick="studentChoiceForm()">Open Subject Choice Manager</button>`;
+}
+
+async function classTeacherForm(){
+  await lookups();
+  modal("Assign Class Teacher",`<div class="form-grid">
+    <div class="field"><label>Class</label><select id="ctClass" onchange="ctLoadSections()">${S.classes.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join("")}</select></div>
+    <div class="field"><label>Section</label><select id="ctSection"></select></div>
+    <div class="field wide"><label>Teacher</label><select id="ctTeacher">${S.teachers.map(t=>`<option value="${t.id}">${esc(t.full_name)}${t.employee_id?" — "+esc(t.employee_id):""}</option>`).join("")}</select></div>
+  </div><button class="primary full" onclick="saveClassTeacher()">Save Class Teacher</button>`);
+  ctLoadSections();
+}
+function ctLoadSections(){
+  const cl=$("ctClass"),se=$("ctSection"); if(!cl||!se)return;
+  se.innerHTML=S.sections.filter(x=>x.class_id===cl.value).map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join("");
+}
+async function saveClassTeacher(){
+  const o={class_id:$("ctClass").value,section_id:$("ctSection").value,teacher_id:$("ctTeacher").value,academic_year:YEAR};
+  if(!o.section_id||!o.teacher_id)return toast("Select section and teacher",false);
+  const r=await S.sb.from("class_teacher_assignments").upsert(o,{onConflict:"class_id,section_id,academic_year"});
+  if(r.error)return toast(r.error.message,false);
+  closeModal();toast("Class teacher assigned");await go("classes");
+}
+
+async function studentChoiceForm(){
+  await lookups();
+  modal("Individual Student Subject Choice",`<div class="form-grid">
+    <div class="field"><label>Class</label><select id="scClass" onchange="scLoadSections()">${S.classes.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join("")}</select></div>
+    <div class="field"><label>Section</label><select id="scSection" onchange="scLoadStudents()"></select></div>
+    <div class="field wide"><label>Student</label><select id="scStudent" onchange="scLoadChoices()"></select></div>
+  </div>
+  <div id="scSubjects" class="card" style="margin-top:10px">Select a student first.</div>
+  <button class="primary full" onclick="saveStudentChoices()">Save Subject Choices</button>`);
+  scLoadSections();
+}
+function scLoadSections(){
+  const cl=$("scClass"),se=$("scSection");if(!cl||!se)return;
+  se.innerHTML=S.sections.filter(x=>x.class_id===cl.value).map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join("");
+  scLoadStudents();
+}
+function scLoadStudents(){
+  const cl=$("scClass"),se=$("scSection"),st=$("scStudent");if(!st)return;
+  const rows=S.students.filter(x=>x.class_id===cl.value&&(!se.value||x.section_id===se.value));
+  st.innerHTML=rows.map(x=>`<option value="${x.id}">${esc(x.roll_no)} — ${esc(x.full_name)}</option>`).join("");
+  scLoadChoices();
+}
+async function scLoadChoices(){
+  const box=$("scSubjects"),student=$("scStudent");if(!box||!student)return;
+  if(!student.value){box.innerHTML="No student selected.";return;}
+  const r=await S.sb.from("student_subject_choices").select("subject_id").eq("student_id",student.value).eq("academic_year",YEAR);
+  if(r.error){box.innerHTML=`<div class="err">${esc(r.error.message)}</div>`;return}
+  const selected=(r.data||[]).map(x=>x.subject_id);
+  const st=S.students.find(x=>x.id===student.value);
+  const subs=S.subjects.filter(s=>!s.class_id||s.class_id===st?.class_id);
+  box.innerHTML=`<b>Select subjects for ${esc(st?.full_name||"student")}</b>
+  <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px">
+  ${subs.map(s=>`<label style="border:1px solid var(--line);padding:9px;border-radius:10px">
+    <input type="checkbox" class="scSub" value="${s.id}" ${selected.includes(s.id)?"checked":""}> ${esc(s.name||s.subject_name)}
+  </label>`).join("")}</div>`;
+}
+async function saveStudentChoices(){
+  const student=$("scStudent").value;if(!student)return toast("Select a student",false);
+  const ids=[...document.querySelectorAll(".scSub:checked")].map(x=>x.value);
+  const d=await S.sb.from("student_subject_choices").delete().eq("student_id",student).eq("academic_year",YEAR);
+  if(d.error)return toast(d.error.message,false);
+  if(ids.length){
+    const r=await S.sb.from("student_subject_choices").insert(ids.map(subject_id=>({student_id:student,subject_id,academic_year:YEAR,choice_type:"Optional"})));
+    if(r.error)return toast(r.error.message,false);
+  }
+  closeModal();toast("Student subject choices saved");
+}
+
+async function teachers(){
+  await lookups();
+  const ta=await S.sb.from("teacher_subject_assignments").select("*").eq("academic_year",YEAR);
+  const rows=(ta.data||[]).map(x=>`<tr><td>${TC(x.teacher_id)}</td><td>${C(x.class_id)}</td><td>${SEC(x.section_id)}</td><td>${SUB(x.subject_id)}</td>
+    <td><button class="danger" onclick="deleteSimple('teacher_subject_assignments','${x.id}','Teacher Subject Assignment')">Delete</button></td></tr>`).join("");
+  $("content").innerHTML=`
+  <div class="section-title"><h3>Teachers</h3><div class="actions">
+    <button class="primary" onclick="teacherForm()">+ Add Teacher</button>
+    ${bulkControls("teachers","Teacher",["full_name","email","phone","employee_id","active"],[["Sample Teacher","teacher@example.com","9999999999","EMP001",true]])}
+  </div></div>
+  ${tbl(["Teacher","Email","Phone","Employee ID","Active","Action"],S.teachers.map(x=>`<tr><td><b>${esc(x.full_name)}</b></td><td>${esc(x.email)}</td><td>${esc(x.phone)}</td><td>${esc(x.employee_id)}</td><td>${x.active===false?"No":"Yes"}</td>
+  <td class="actions"><button class="secondary" onclick="editSimple('teachers','${x.id}','Teacher',[["full_name","Full Name"],["email","Email"],["phone","Phone"],["employee_id","Employee ID"]])">Edit</button>
+  <button class="danger" onclick="deleteSimple('teachers','${x.id}','Teacher')">Delete</button></td></tr>`).join(""))}
+  <div class="section-title"><h3>Teacher → Class/Section → Subject</h3><button class="primary" onclick="teacherSubjectForm()">+ Assign Subject Teacher</button></div>
+  ${tbl(["Teacher","Class","Section","Subject","Action"],rows)}`;
+}
+function teacherForm(){
+  modal("Add Teacher",`<div class="form-grid">
+    <div class="field wide"><label>Full Name</label><input id="tfName"></div>
+    <div class="field"><label>Email</label><input id="tfEmail" type="email"></div>
+    <div class="field"><label>Phone</label><input id="tfPhone"></div>
+    <div class="field"><label>Employee ID</label><input id="tfEmp"></div>
+    <div class="field"><label>Active</label><select id="tfActive"><option value="true">Yes</option><option value="false">No</option></select></div>
+  </div><button class="primary full" onclick="saveTeacher()">Save Teacher</button>`);
+}
+async function saveTeacher(){
+  const r=await S.sb.from("teachers").insert({
+    full_name:$("tfName").value.trim(),email:$("tfEmail").value.trim(),
+    phone:$("tfPhone").value.trim(),employee_id:$("tfEmp").value.trim(),
+    active:$("tfActive").value==="true"
+  });
+  if(r.error)return toast(r.error.message,false);closeModal();toast("Teacher added");await go("teachers");
+}
+async function teacherSubjectForm(){
+  await lookups();
+  modal("Assign Subject Teacher",`<div class="form-grid">
+    <div class="field wide"><label>Teacher</label><select id="tsaTeacher">${S.teachers.map(t=>`<option value="${t.id}">${esc(t.full_name)}</option>`).join("")}</select></div>
+    <div class="field"><label>Class</label><select id="tsaClass" onchange="tsaLoadSections()">${S.classes.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join("")}</select></div>
+    <div class="field"><label>Section</label><select id="tsaSection"></select></div>
+    <div class="field wide"><label>Subject</label><select id="tsaSubject">${S.subjects.map(s=>`<option value="${s.id}">${esc(s.name||s.subject_name)}</option>`).join("")}</select></div>
+  </div><button class="primary full" onclick="saveTeacherSubject()">Save Assignment</button>`);
+  tsaLoadSections();
+}
+function tsaLoadSections(){
+  const c=$("tsaClass"),s=$("tsaSection");if(!c||!s)return;
+  s.innerHTML=`<option value="">All Sections</option>`+S.sections.filter(x=>x.class_id===c.value).map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join("");
+}
+async function saveTeacherSubject(){
+  const o={teacher_id:$("tsaTeacher").value,class_id:$("tsaClass").value,section_id:$("tsaSection").value||null,subject_id:$("tsaSubject").value,academic_year:YEAR};
+  const r=await S.sb.from("teacher_subject_assignments").upsert(o,{onConflict:"teacher_id,class_id,section_id,subject_id,academic_year"});
+  if(r.error)return toast(r.error.message,false);
+  closeModal();toast("Subject teacher assigned");await go("teachers");
+}
+
+function examinationForm(){
+  modal("Create Examination",`<div class="form-grid">
+    <div class="field wide"><label>Examination Name</label><input id="exName" placeholder="Periodic Test 1"></div>
+    <div class="field"><label>Exam Date</label><input id="exDate" type="date"></div>
+    <div class="field"><label>Class</label><select id="exClass"><option value="">All Classes</option>${S.classes.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join("")}</select></div>
+    <div class="field"><label>Maximum Marks</label><input id="exMax" type="number" value="40"></div>
+    <div class="field"><label>Active</label><select id="exActive"><option value="true">Yes</option><option value="false">No</option></select></div>
+  </div><button class="primary full" onclick="saveExamination()">Create Examination</button>`);
+}
+async function saveExamination(){
+  const name=$("exName").value.trim();if(!name)return toast("Enter examination name",false);
+  const r=await S.sb.from("examinations").insert({
+    name,exam_date:$("exDate").value||null,class_id:$("exClass").value||null,
+    max_marks:Number($("exMax").value||0),active:$("exActive").value==="true"
+  });
+  if(r.error)return toast(r.error.message,false);closeModal();toast("Examination created");await go("exams");
+}
+async function exams(){
+  await lookups();
+  $("content").innerHTML=`<div class="section-title"><h3>Examinations</h3><div class="actions">
+    <button class="primary" onclick="examinationForm()">+ Create Examination</button>
+    ${bulkControls("examinations","Examination",["name","exam_date","class_id","max_marks","active"],[["Periodic Test 1","2026-08-25","",40,true]])}
+  </div></div>
+  <div class="notice"><b>Create an examination first.</b> Then go to <b>Marks Entry</b>, select the examination, class and subject, and enter marks.</div>
+  ${tbl(["Examination","Date","Class","Max Marks","Active","Action"],S.exams.map(x=>`<tr>
+    <td><b>${esc(x.name||x.exam_name||x.title)}</b></td><td>${esc(x.exam_date||"")}</td><td>${C(x.class_id)||"All"}</td><td>${esc(x.max_marks||"")}</td><td>${x.active===false?"No":"Yes"}</td>
+    <td class="actions"><button class="secondary" onclick="editSimple('examinations','${x.id}','Examination',[["name","Name"],["exam_date","Date","date"],["class_id","Class ID"],["max_marks","Maximum Marks","number"],["active","Active","boolean"]])">Edit</button>
+    <button class="danger" onclick="deleteSimple('examinations','${x.id}','Examination')">Delete</button></td>
+  </tr>`).join(""))}`;
+}
+
+async function marks(){
+  await lookups();
+  const cls=S.classes[0]?.id||"";
+  $("content").innerHTML=`<div class="toolbar">
+    <div style="min-width:180px"><label class="mini">Examination</label><select id="mkExam" onchange="loadMarksGrid()">${S.exams.map(e=>`<option value="${e.id}">${esc(e.name||e.exam_name||e.title)}</option>`).join("")}</select></div>
+    <div style="min-width:140px"><label class="mini">Class</label><select id="mkClass" onchange="loadMarksGrid()">${S.classes.map(c=>`<option value="${c.id}" ${c.id===cls?"selected":""}>${esc(c.name)}</option>`).join("")}</select></div>
+    <div style="min-width:180px"><label class="mini">Subject</label><select id="mkSubject" onchange="loadMarksGrid()">${S.subjects.map(s=>`<option value="${s.id}">${esc(s.name||s.subject_name)}</option>`).join("")}</select></div>
+  </div>
+  <div id="marksGrid"><div class="card">Select examination, class and subject.</div></div>`;
+  loadMarksGrid();
+}
+async function loadMarksGrid(){
+  const ex=$("mkExam")?.value,cl=$("mkClass")?.value,sub=$("mkSubject")?.value;
+  if(!ex||!cl||!sub){$("marksGrid").innerHTML='<div class="card">Create an examination and select all three options.</div>';return}
+  const er=S.exams.find(x=>x.id===ex), students=S.students.filter(x=>x.class_id===cl);
+  const mr=await S.sb.from("student_exam_marks").select("*").eq("examination_id",ex).eq("subject_id",sub);
+  if(mr.error){$("marksGrid").innerHTML=`<div class="card"><div class="err">${esc(mr.error.message)}</div><div class="mini">Run the supplied Academic Setup SQL once in Supabase.</div></div>`;return}
+  const map=Object.fromEntries((mr.data||[]).map(x=>[x.student_id,x]));
+  $("marksGrid").innerHTML=`<div class="notice"><b>${esc(er?.name||"Examination")}</b> • ${esc(SUB(sub))} • Maximum Marks: ${esc(er?.max_marks||"")}</div>
+  ${tbl(["Roll","Admission","Student","Section","Marks","Remarks"],students.map(st=>{
+    const m=map[st.id]||{};
+    return `<tr><td>${esc(st.roll_no)}</td><td>${esc(st.admission_no)}</td><td><b>${esc(st.full_name)}</b></td><td>${SEC(st.section_id)}</td>
+    <td><input class="marks-table-input" id="mark_${st.id}" type="number" min="0" max="${er?.max_marks||999}" step="0.01" value="${m.marks??""}" style="width:100px;padding:8px;border:1px solid var(--line);border-radius:8px"></td>
+    <td><input id="remark_${st.id}" value="${esc(m.remarks||"")}" style="width:180px;padding:8px;border:1px solid var(--line);border-radius:8px"></td></tr>`;
+  }).join(""))}
+  <button class="primary" onclick="saveMarksGrid()">Save All Marks</button>`;
+}
+async function saveMarksGrid(){
+  const ex=$("mkExam").value,cl=$("mkClass").value,sub=$("mkSubject").value;
+  const er=S.exams.find(x=>x.id===ex), students=S.students.filter(x=>x.class_id===cl);
+  const rows=[];
+  for(const st of students){
+    const raw=$("mark_"+st.id)?.value;
+    const remark=$("remark_"+st.id)?.value||"";
+    if(raw==="" && !remark)continue;
+    const marks=raw===""?null:Number(raw);
+    if(marks!==null && (marks<0 || marks>Number(er?.max_marks||999)))return toast(`Invalid marks for ${st.full_name}`,false);
+    rows.push({student_id:st.id,examination_id:ex,subject_id:sub,marks,max_marks:Number(er?.max_marks||0),remarks:remark});
+  }
+  if(!rows.length)return toast("No marks entered",false);
+  const r=await S.sb.from("student_exam_marks").upsert(rows,{onConflict:"student_id,examination_id,subject_id"});
+  if(r.error)return toast(r.error.message,false);
+  toast(rows.length+" student marks saved");loadMarksGrid();
+}
+</script>
 </body>
 </html>
