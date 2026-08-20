@@ -31,7 +31,7 @@ const CONFIG={
 };
 const DEFAULT_SCHOOL="PM SHRI Jawahar Navodaya Vidyalaya, Wargal, Siddipet";
 const YEAR="2026-27";
-const state={sb:null,user:null,profile:null,page:"dashboard",settings:{school_name:DEFAULT_SCHOOL,logo_left:"",logo_right:"",vp_signature:"",principal_signature:""},classes:[],sections:[],students:[],subjects:[],exams:[],teachers:[],assignments:[],resultRows:[]};
+const state={sb:null,user:null,profile:null,page:"dashboard",settings:{school_name:DEFAULT_SCHOOL,logo_left:"",logo_right:"",vp_signature:"",principal_signature:""},classes:[],sections:[],students:[],subjects:[],exams:[],teachers:[],assignments:[],classSubjects:[],studentChoices:[],resultRows:[]};
 let importRows=[],teacherRows=[],assignmentRows=[];
 
 function $(id){return document.getElementById(id)}
@@ -156,15 +156,79 @@ function sectionModal(id=""){const x=state.sections.find(a=>a.id===id)||{};$("mo
 async function saveSection(id){const x={name:$("x_name").value.trim(),class_id:$("x_class").value,active:$("x_active").value==="true"};if(!x.name){toast("Section name required",false);return}const r=id?await state.sb.from("sections").update(x).eq("id",id):await state.sb.from("sections").insert(x);if(r.error){toast(r.error.message,false);return}closeModal();toast(id?"Section updated":"Section saved");classes()}
 async function deleteSection(id){if(!confirm("Delete this section?"))return;const r=await state.sb.from("sections").delete().eq("id",id);if(r.error){toast(r.error.message,false);return}toast("Section deleted");classes()}
 
-async function subjects(){
- await loadLookups();
- $("content").innerHTML=`<div class="toolbar">${isAdmin()?'<button class="primary" onclick="subjectModal()">+ Add Subject</button><button class="secondary" onclick="subjectBulkModal()">⇧ Bulk Upload</button>':""}</div><div class="table-wrap"><table class="table"><thead><tr><th>Code</th><th>Subject</th><th>Active</th><th>Action</th></tr></thead><tbody>${state.subjects.map(x=>`<tr><td>${esc(x.code)}</td><td>${esc(x.name)}</td><td>${x.active!==false?"Yes":"No"}</td><td>${isAdmin()?`<button class="secondary" onclick="subjectModal('${x.id}')">Edit</button><button class="danger" onclick="deleteSubject('${x.id}')">Delete</button>`:""}</td></tr>`).join("")}</tbody></table></div>`;
+async function loadSubjectAllocation(){
+ const [cs,sc]=await Promise.all([
+  state.sb.from("class_subjects").select("*").eq("academic_year",YEAR),
+  state.sb.from("student_subject_choices").select("*").eq("academic_year",YEAR)
+ ]);
+ if(cs.error)throw cs.error;if(sc.error)throw sc.error;
+ state.classSubjects=cs.data||[];state.studentChoices=sc.data||[];
 }
-function subjectModal(id=""){const x=state.subjects.find(a=>a.id===id)||{};$("modal").innerHTML=`<div class="modal"><div class="modal-box"><div class="modal-head"><h3>${id?"Edit":"Add"} Subject</h3><button class="close" onclick="closeModal()">×</button></div><div class="form-grid"><div class="field"><label>Code</label><input id="sub_code" value="${esc(x.code)}"></div><div class="field"><label>Name</label><input id="sub_name" value="${esc(x.name)}"></div></div><div class="field"><label>Active</label><select id="sub_active"><option value="true" ${x.active!==false?"selected":""}>Yes</option><option value="false" ${x.active===false?"selected":""}>No</option></select></div><button class="primary full" onclick="saveSubject('${id}')">Save</button></div></div>`}
-async function saveSubject(id){const x={code:$("sub_code").value.trim(),name:$("sub_name").value.trim(),active:$("sub_active").value==="true"};if(!x.name){toast("Subject name required",false);return}const r=id?await state.sb.from("subjects").update(x).eq("id",id):await state.sb.from("subjects").insert(x);if(r.error){toast(r.error.message,false);return}closeModal();toast(id?"Subject updated":"Subject saved");subjects()}
-async function deleteSubject(id){if(!confirm("Delete this subject?"))return;const r=await state.sb.from("subjects").delete().eq("id",id);if(r.error){toast(r.error.message,false);return}toast("Subject deleted");subjects()}
-function subjectBulkModal(){$("modal").innerHTML=`<div class="modal"><div class="modal-box"><div class="modal-head"><h3>Bulk Subject Upload</h3><button class="close" onclick="closeModal()">×</button></div><div class="field"><label>One per line: CODE,Subject Name</label><textarea id="bulkSubjects" placeholder="ENG,English&#10;HIN,Hindi&#10;MAT,Mathematics"></textarea></div><button class="primary full" onclick="saveBulkSubjects()">Upload Subjects</button></div></div>`}
-async function saveBulkSubjects(){const rows=$("bulkSubjects").value.split(/\n/).map(x=>{const p=x.split(",");return{code:(p[0]||"").trim(),name:p.slice(1).join(",").trim(),active:true}}).filter(x=>x.code&&x.name);if(!rows.length){toast("Enter subjects first",false);return}const r=await state.sb.from("subjects").insert(rows);if(r.error){toast(r.error.message,false);return}closeModal();toast(`${rows.length} subjects uploaded`);subjects()}
+async function subjects(){
+ await loadLookups();await loadSubjectAllocation();
+ $("content").innerHTML=`<div class="toolbar"><button class="primary" onclick="subjectModal()">+ Add Subject</button><button class="secondary" onclick="subjectBulkModal()">⇧ Bulk Upload</button></div>
+ <div class="notice" style="margin-bottom:14px"><b>Subject Allocation:</b> Configure subjects offered in each class, then record each student's optional/choice subjects. Compulsory subjects are automatically selected for every student.</div>
+ <div class="section-title"><h3>1. Class Subject Setup</h3><button class="primary" onclick="classSubjectModal()">+ Assign Subject to Class</button></div>
+ <div class="table-wrap"><table class="table"><thead><tr><th>Class</th><th>Subject</th><th>Type</th><th>Teacher</th><th>Max Marks</th><th>Pass Marks</th><th>Max Students</th><th>Active</th><th>Action</th></tr></thead><tbody>
+ ${state.classSubjects.map(x=>`<tr><td>${esc(className(x.class_id))}</td><td>${esc(subjectName(x.subject_id))}</td><td><span class="badge ${x.is_compulsory?"":"warn"}">${x.is_compulsory?"Compulsory":"Optional"}</span></td><td>${esc(teacherName(x.teacher_id))||"—"}</td><td>${esc(x.max_marks??100)}</td><td>${esc(x.pass_marks??33)}</td><td>${esc(x.max_students??"—")}</td><td>${x.active!==false?"Yes":"No"}</td><td class="actions"><button class="secondary" onclick="classSubjectModal('${x.id}')">Edit</button><button class="danger" onclick="deleteClassSubject('${x.id}')">Delete</button></td></tr>`).join("")||'<tr><td colspan="9" class="empty">No class subjects configured. Add subjects for each class.</td></tr>'}
+ </tbody></table></div>
+ <div class="section-title"><h3>2. Student Subject Choice</h3><button class="secondary" onclick="studentChoiceBulkModal()">⇧ Bulk Upload Choices</button></div>
+ <div class="toolbar"><select id="choiceClass" onchange="renderStudentChoiceTable()"><option value="">All Classes</option>${state.classes.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join("")}</select><select id="choiceSection" onchange="renderStudentChoiceTable()"><option value="">All Sections</option></select><input id="choiceSearch" placeholder="Search student" oninput="renderStudentChoiceTable()"></div>
+ <div id="studentChoiceTable"></div>`;
+ renderStudentChoiceTable();
+}
+function availableSubjectsForClass(classId){return state.classSubjects.filter(x=>x.class_id===classId&&x.active!==false)}
+function classSubjectModal(id=""){
+ const x=state.classSubjects.find(a=>a.id===id)||{},classId=x.class_id||state.classes[0]?.id||"";
+ $("modal").innerHTML=`<div class="modal"><div class="modal-box"><div class="modal-head"><h3>${id?"Edit":"Assign"} Subject to Class</h3><button class="close" onclick="closeModal()">×</button></div>
+ <div class="form-grid"><div class="field"><label>Class *</label><select id="cs_class">${state.classes.filter(c=>c.active!==false).map(c=>`<option value="${c.id}" ${c.id===classId?"selected":""}>${esc(c.name)}</option>`).join("")}</select></div>
+ <div class="field"><label>Subject *</label><select id="cs_subject">${state.subjects.filter(s=>s.active!==false).map(s=>`<option value="${s.id}" ${s.id===x.subject_id?"selected":""}>${esc(s.name)}${s.code?" ("+esc(s.code)+")":""}</option>`).join("")}</select></div>
+ <div class="field"><label>Teacher</label><select id="cs_teacher"><option value="">Not assigned</option>${state.teachers.filter(t=>t.active!==false).map(t=>`<option value="${t.id}" ${t.id===x.teacher_id?"selected":""}>${esc(t.full_name)} — ${esc(t.employee_id)}</option>`).join("")}</select></div>
+ <div class="field"><label>Maximum Marks</label><input id="cs_max" type="number" value="${x.max_marks??100}"></div><div class="field"><label>Pass Marks</label><input id="cs_pass" type="number" value="${x.pass_marks??33}"></div>
+ <div class="field"><label>Maximum Students (optional)</label><input id="cs_capacity" type="number" value="${x.max_students??""}"></div>
+ <div class="field"><label>Subject Type</label><select id="cs_comp"><option value="true" ${x.is_compulsory!==false?"selected":""}>Compulsory</option><option value="false" ${x.is_compulsory===false?"selected":""}>Optional / Choice</option></select></div>
+ <div class="field"><label>Active</label><select id="cs_active"><option value="true" ${x.active!==false?"selected":""}>Yes</option><option value="false" ${x.active===false?"selected":""}>No</option></select></div></div>
+ <div class="hint">Compulsory subjects will be automatically included for every student in the class. Optional subjects are selected student-wise.</div>
+ <button class="primary full" onclick="saveClassSubject('${id}')">Save Class Subject</button></div></div>`;
+}
+async function saveClassSubject(id){
+ const x={class_id:$("cs_class").value,subject_id:$("cs_subject").value,teacher_id:$("cs_teacher").value||null,max_marks:Number($("cs_max").value)||100,pass_marks:Number($("cs_pass").value)||33,max_students:$("cs_capacity").value?Number($("cs_capacity").value):null,is_compulsory:$("cs_comp").value==="true",active:$("cs_active").value==="true",academic_year:YEAR};
+ if(!x.class_id||!x.subject_id){toast("Class and Subject are required",false);return}
+ const dup=state.classSubjects.find(a=>a.id!==id&&a.class_id===x.class_id&&a.subject_id===x.subject_id&&a.academic_year===YEAR);if(dup){toast("This subject is already assigned to the class",false);return}
+ const r=id?await state.sb.from("class_subjects").update(x).eq("id",id):await state.sb.from("class_subjects").insert(x);if(r.error){toast(r.error.message,false);return}
+ closeModal();toast(id?"Class subject updated":"Subject assigned to class");subjects();
+}
+async function deleteClassSubject(id){if(!confirm("Remove this subject from the class? Existing student choices/marks may be affected."))return;const r=await state.sb.from("class_subjects").delete().eq("id",id);if(r.error){toast(r.error.message,false);return}toast("Class subject removed");subjects()}
+function renderStudentChoiceTable(){
+ const c=$("choiceClass")?.value||"",q=($("choiceSearch")?.value||"").toLowerCase(),se=$("choiceSection")?.value||"";
+ const secs=state.sections.filter(s=>!c||s.class_id===c),old=se;
+ if($("choiceSection"))$("choiceSection").innerHTML='<option value="">All Sections</option>'+secs.map(s=>`<option value="${s.id}" ${old===s.id?"selected":""}>${esc(s.name)} — ${esc(className(s.class_id))}</option>`).join("");
+ const actualSe=$("choiceSection")?.value||"";
+ const st=state.students.filter(s=>(!c||s.class_id===c)&&(!actualSe||s.section_id===actualSe)&&(!q||[s.full_name,s.roll_no,s.admission_no].some(v=>String(v||"").toLowerCase().includes(q))));
+ $("studentChoiceTable").innerHTML=st.length?`<div class="table-wrap"><table class="table"><thead><tr><th>Roll</th><th>Student</th><th>Class</th><th>Section</th><th>Selected Subjects</th><th>Action</th></tr></thead><tbody>${st.map(s=>{const ids=new Set(state.studentChoices.filter(x=>x.student_id===s.id).map(x=>x.subject_id)),names=[...ids].map(subjectName).filter(Boolean);return `<tr><td>${esc(s.roll_no)}</td><td>${esc(s.full_name)}</td><td>${esc(className(s.class_id))}</td><td>${esc(sectionName(s.section_id))}</td><td>${names.length?names.map(n=>`<span class="badge" style="margin:2px">${esc(n)}</span>`).join(" "):'<span class="badge warn">No choices saved</span>'}</td><td><button class="secondary" onclick="studentChoiceModal('${s.id}')">Select / Edit</button></td></tr>`}).join("")}</tbody></table></div>`:'<div class="card empty">No students found.</div>';
+}
+function studentChoiceModal(studentId){
+ const s=state.students.find(x=>x.id===studentId);if(!s)return;const offered=availableSubjectsForClass(s.class_id),selected=new Set(state.studentChoices.filter(x=>x.student_id===studentId).map(x=>x.subject_id)),compulsory=offered.filter(x=>x.is_compulsory!==false),optional=offered.filter(x=>x.is_compulsory===false);compulsory.forEach(x=>selected.add(x.subject_id));
+ $("modal").innerHTML=`<div class="modal"><div class="modal-box"><div class="modal-head"><h3>Subject Choice — ${esc(s.full_name)}</h3><button class="close" onclick="closeModal()">×</button></div><div class="notice"><b>Class:</b> ${esc(className(s.class_id))} &nbsp; <b>Section:</b> ${esc(sectionName(s.section_id))} &nbsp; <b>Academic Year:</b> ${YEAR}</div>
+ <h4>Compulsory Subjects</h4><div>${compulsory.length?compulsory.map(x=>`<label style="display:block;padding:8px;border-bottom:1px solid var(--line)"><input type="checkbox" checked disabled> <b>${esc(subjectName(x.subject_id))}</b></label>`).join(""):'<div class="empty">No compulsory subjects configured.</div>'}</div>
+ <h4>Optional / Choice Subjects</h4><div>${optional.length?optional.map(x=>`<label style="display:block;padding:8px;border-bottom:1px solid var(--line)"><input class="student-choice" type="checkbox" data-subject="${x.subject_id}" ${selected.has(x.subject_id)?"checked":""}> ${esc(subjectName(x.subject_id))}</label>`).join(""):'<div class="empty">No optional subjects configured for this class.</div>'}</div>
+ <div class="hint">Select the optional subjects chosen by the student. Compulsory subjects are always included automatically.</div><button class="primary full" onclick="saveStudentChoices('${studentId}')">Save Subject Choices</button></div></div>`;
+}
+async function saveStudentChoices(studentId){
+ const s=state.students.find(x=>x.id===studentId);if(!s)return;const offered=availableSubjectsForClass(s.class_id),compulsory=offered.filter(x=>x.is_compulsory!==false).map(x=>x.subject_id),optional=[...document.querySelectorAll(".student-choice:checked")].map(x=>x.dataset.subject),ids=[...new Set([...compulsory,...optional])];
+ const old=await state.sb.from("student_subject_choices").select("id,subject_id").eq("student_id",studentId).eq("academic_year",YEAR);if(old.error){toast(old.error.message,false);return}
+ for(const row of old.data||[]){if(!ids.includes(row.subject_id)){const r=await state.sb.from("student_subject_choices").delete().eq("id",row.id);if(r.error){toast(r.error.message,false);return}}}
+ const existing=new Set((old.data||[]).map(x=>x.subject_id));
+ for(const subjectId of ids){if(existing.has(subjectId))continue;const r=await state.sb.from("student_subject_choices").insert({student_id:studentId,subject_id:subjectId,academic_year:YEAR,choice_type:compulsory.includes(subjectId)?"compulsory":"optional"});if(r.error){toast(r.error.message,false);return}}
+ closeModal();toast("Student subject choices saved");subjects();
+}
+function studentChoiceBulkModal(){$("modal").innerHTML=`<div class="modal"><div class="modal-box"><div class="modal-head"><h3>Bulk Student Subject Choices</h3><button class="close" onclick="closeModal()">×</button></div><div class="notice">CSV columns: <b>admission_no,subject_code</b>. Use one row per selected subject. Compulsory subjects are added automatically.</div><div class="field"><input id="choiceFile" type="file" accept=".csv" onchange="previewChoiceImport(event)"></div><div id="choicePreview"></div><button class="primary full" onclick="runChoiceImport()">Import Choices</button></div></div>`}
+function previewChoiceImport(e){Papa.parse(e.target.files[0],{header:true,skipEmptyLines:true,complete:r=>{importRows=r.data||[];$("choicePreview").innerHTML=`<div class="notice">${importRows.length} rows detected.</div>`}})}
+async function runChoiceImport(){
+ if(!importRows.length){toast("Choose a CSV file first",false);return}
+ for(const x of importRows){const s=state.students.find(a=>String(a.admission_no).trim().toLowerCase()===String(x.admission_no||"").trim().toLowerCase()),sub=state.subjects.find(a=>String(a.code).trim().toLowerCase()===String(x.subject_code||"").trim().toLowerCase());if(!s||!sub)continue;const offered=availableSubjectsForClass(s.class_id).find(a=>a.subject_id===sub.id);if(!offered)continue;const old=await state.sb.from("student_subject_choices").select("id").eq("student_id",s.id).eq("subject_id",sub.id).eq("academic_year",YEAR).maybeSingle();if(old.error){toast(old.error.message,false);return}if(!old.data){const r=await state.sb.from("student_subject_choices").insert({student_id:s.id,subject_id:sub.id,academic_year:YEAR,choice_type:offered.is_compulsory!==false?"compulsory":"optional"});if(r.error){toast(r.error.message,false);return}}}
+ closeModal();toast("Subject choices imported");subjects();
+}
 
 async function exams(){
  await loadLookups();
@@ -203,20 +267,27 @@ async function runAssignmentImport(){for(const x of assignmentRows){const t=stat
 
 function teacherAllowed(subjectId,classId,sectionId){if(isAdmin())return true;return state.assignments.some(a=>a.teacher_id===state.user.id&&a.subject_id===subjectId&&a.class_id===classId&&a.section_id===sectionId&&a.active!==false)}
 async function marks(){
- await loadLookups();let classes=state.classes,subjects=state.subjects;
- if(!isAdmin()){const mine=state.assignments.filter(a=>a.teacher_id===state.user.id&&a.active!==false);classes=classes.filter(c=>mine.some(a=>a.class_id===c.id));subjects=subjects.filter(s=>mine.some(a=>a.subject_id===s.id))}
+ await loadLookups();await loadSubjectAllocation();let classes=state.classes;
+ if(!isAdmin()){const mine=state.assignments.filter(a=>a.teacher_id===state.user.id&&a.active!==false);classes=classes.filter(c=>mine.some(a=>a.class_id===c.id))}
  if(!classes.length){$("content").innerHTML='<div class="card empty">No class/subject assignment is available for this teacher.</div>';return}
- $("content").innerHTML=`<div class="card"><div class="form-grid"><div class="field"><label>Examination</label><select id="m_exam" onchange="loadMarksGrid()">${state.exams.map(x=>`<option value="${x.id}">${esc(x.name)} — ${esc(x.academic_year)}</option>`).join("")}</select></div><div class="field"><label>Class</label><select id="m_class" onchange="marksSectionOptions()">${classes.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join("")}</select></div><div class="field"><label>Section</label><select id="m_section" onchange="loadMarksGrid()"></select></div><div class="field"><label>Subject</label><select id="m_subject" onchange="loadMarksGrid()">${subjects.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join("")}</select></div></div></div><div id="marksGrid" style="margin-top:14px"></div>`;
+ $("content").innerHTML=`<div class="card"><div class="form-grid"><div class="field"><label>Examination</label><select id="m_exam" onchange="loadMarksGrid()">${state.exams.map(x=>`<option value="${x.id}">${esc(x.name)} — ${esc(x.academic_year)}</option>`).join("")}</select></div><div class="field"><label>Class</label><select id="m_class" onchange="marksSectionOptions()">${classes.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join("")}</select></div><div class="field"><label>Section</label><select id="m_section" onchange="marksSubjectOptions()"></select></div><div class="field"><label>Subject</label><select id="m_subject" onchange="loadMarksGrid()"></select></div></div></div><div id="marksGrid" style="margin-top:14px"></div>`;
  marksSectionOptions();
 }
-function marksSectionOptions(){const list=sectionsFor($("m_class").value);$("m_section").innerHTML=list.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join("");loadMarksGrid()}
+function marksSectionOptions(){const list=sectionsFor($("m_class").value);$("m_section").innerHTML=list.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join("");marksSubjectOptions()}
+function marksSubjectOptions(){
+ const cl=$("m_class")?.value,se=$("m_section")?.value;if(!cl||!se)return;let offered=availableSubjectsForClass(cl);
+ if(!isAdmin())offered=offered.filter(cs=>state.assignments.some(a=>a.teacher_id===state.user.id&&a.subject_id===cs.subject_id&&a.class_id===cl&&a.section_id===se&&a.active!==false));
+ const old=$("m_subject")?.value;$("m_subject").innerHTML=offered.map(cs=>`<option value="${cs.subject_id}" ${old===cs.subject_id?"selected":""}>${esc(subjectName(cs.subject_id))}${cs.is_compulsory===false?" — Optional":""}</option>`).join("");loadMarksGrid();
+}
 async function loadMarksGrid(){
  const ex=$("m_exam")?.value,cl=$("m_class")?.value,se=$("m_section")?.value,sub=$("m_subject")?.value;if(!ex||!cl||!se||!sub)return;
  if(!teacherAllowed(sub,cl,se)){$("marksGrid").innerHTML='<div class="card empty">Teacher is not assigned to this subject/class/section.</div>';return}
- const students=state.students.filter(s=>s.class_id===cl&&s.section_id===se).sort((a,b)=>String(a.roll_no).localeCompare(String(b.roll_no),undefined,{numeric:true}));
+ const cs=state.classSubjects.find(x=>x.class_id===cl&&x.subject_id===sub&&x.active!==false)||{};
+ const choiceR=await state.sb.from("student_subject_choices").select("student_id").eq("academic_year",YEAR).eq("subject_id",sub);if(choiceR.error){$("marksGrid").innerHTML=`<div class="card err">${esc(choiceR.error.message)}</div>`;return}
+ const selected=new Set((choiceR.data||[]).map(x=>x.student_id)),students=state.students.filter(s=>s.class_id===cl&&s.section_id===se&&selected.has(s.id)).sort((a,b)=>String(a.roll_no).localeCompare(String(b.roll_no),undefined,{numeric:true}));
  const mr=await state.sb.from("marks").select("*").eq("examination_id",ex).eq("subject_id",sub);if(mr.error){$("marksGrid").innerHTML=`<div class="card err">${esc(mr.error.message)}</div>`;return}
  const map=new Map((mr.data||[]).map(x=>[x.student_id,x]));
- $("marksGrid").innerHTML=`<div class="section-title"><h3>${esc(subjectName(sub))} — ${esc(className(cl))} ${esc(sectionName(se))}</h3><div><button class="secondary" onclick="saveMarks(false)">Save Draft</button><button class="primary" style="margin-left:6px" onclick="saveMarks(true)">Submit Marks</button></div></div><div class="table-wrap marks-table"><table class="table"><thead><tr><th>Roll</th><th>Admission</th><th>Student</th><th>Max</th><th>Marks</th><th>Attendance</th><th>Status</th></tr></thead><tbody>${students.map(s=>{const m=map.get(s.id);return `<tr><td>${esc(s.roll_no)}</td><td>${esc(s.admission_no)}</td><td>${esc(s.full_name)}</td><td><input class="maxmark" data-id="${s.id}" type="number" value="${m?.max_marks??100}" min="0"></td><td><input class="markval" data-id="${s.id}" type="number" value="${m?.marks??""}" min="0"></td><td><select class="attval" data-id="${s.id}"><option ${!m||m.attendance_status==="Present"?"selected":""}>Present</option><option ${m?.attendance_status==="Absent"?"selected":""}>Absent</option></select></td><td>${m?.status?`<span class="badge ${m.status==="submitted"?"":"warn"}">${esc(m.status)}</span>`:"<span class='badge'>New</span>"}</td></tr>`}).join("")}</tbody></table></div>`;
+ $("marksGrid").innerHTML=`<div class="section-title"><h3>${esc(subjectName(sub))} — ${esc(className(cl))} ${esc(sectionName(se))}</h3><div><button class="secondary" onclick="saveMarks(false)">Save Draft</button><button class="primary" style="margin-left:6px" onclick="saveMarks(true)">Submit Marks</button></div></div>${students.length?`<div class="table-wrap marks-table"><table class="table"><thead><tr><th>Roll</th><th>Admission</th><th>Student</th><th>Max</th><th>Marks</th><th>Attendance</th><th>Status</th></tr></thead><tbody>${students.map(s=>{const m=map.get(s.id);return `<tr><td>${esc(s.roll_no)}</td><td>${esc(s.admission_no)}</td><td>${esc(s.full_name)}</td><td><input class="maxmark" data-id="${s.id}" type="number" value="${m?.max_marks??cs.max_marks??100}" min="0"></td><td><input class="markval" data-id="${s.id}" type="number" value="${m?.marks??""}" min="0"></td><td><select class="attval" data-id="${s.id}"><option ${!m||m.attendance_status==="Present"?"selected":""}>Present</option><option ${m?.attendance_status==="Absent"?"selected":""}>Absent</option></select></td><td>${m?.status?`<span class="badge ${m.status==="submitted"?"":"warn"}">${esc(m.status)}</span>`:"<span class='badge'>New</span>"}</td></tr>`}).join("")}</tbody></table></div>`:'<div class="card empty">No students have selected this subject. Configure Class Subject Setup and Student Subject Choices first.</div>'}`;
 }
 async function saveMarks(submit){
  const ex=$("m_exam").value,sub=$("m_subject").value,ids=[...document.querySelectorAll(".markval")].map(e=>e.dataset.id),rows=[];
@@ -274,10 +345,10 @@ async function results(){
 function resultSectionOptions(){const c=$("r_class").value;$("r_section").innerHTML='<option value="">All Sections</option>'+state.sections.filter(s=>!c||s.class_id===c).map(s=>`<option value="${s.id}">${esc(s.name)} — ${esc(className(s.class_id))}</option>`).join("");buildResults()}
 function grade(p){return p>=90?"A1":p>=80?"A2":p>=70?"B1":p>=60?"B2":p>=50?"C":p>=40?"D":p>=33?"E":"F"}
 async function buildResults(){
- const ex=$("r_exam").value,cl=$("r_class").value,se=$("r_section").value;let st=state.students.filter(s=>(!cl||s.class_id===cl)&&(!se||s.section_id===se));
+ const ex=$("r_exam").value,cl=$("r_class").value,se=$("r_section").value;await loadSubjectAllocation();let st=state.students.filter(s=>(!cl||s.class_id===cl)&&(!se||s.section_id===se));
  if(!isAdmin())st=st.filter(s=>state.assignments.some(a=>a.teacher_id===state.user.id&&a.class_id===s.class_id&&a.section_id===s.section_id&&a.active!==false));
  const mr=await state.sb.from("marks").select("student_id,marks,max_marks,subject_id,status,attendance_status").eq("examination_id",ex);if(mr.error)throw mr.error;
- const by=new Map();(mr.data||[]).forEach(m=>{if(!by.has(m.student_id))by.set(m.student_id,[]);by.get(m.student_id).push(m)});
+ const by=new Map();(mr.data||[]).forEach(m=>{if(!state.studentChoices.some(c=>c.student_id===m.student_id&&c.subject_id===m.subject_id&&c.academic_year===YEAR))return;if(!by.has(m.student_id))by.set(m.student_id,[]);by.get(m.student_id).push(m)});
  const rows=st.map(s=>{const a=by.get(s.id)||[],ev=a.filter(m=>m.attendance_status!=="Absent"),total=ev.reduce((x,m)=>x+(Number(m.marks)||0),0),max=ev.reduce((x,m)=>x+(Number(m.max_marks)||100),0),pct=max?total/max*100:0;return {...s,total,max,pct,grade:grade(pct),status:pct>=33?"PASS":"FAIL",entered:a.length}}).sort((a,b)=>b.pct-a.pct);
  rows.forEach((r,i)=>r.rank=r.pct>0?i+1:"—");state.resultRows=rows;
  $("resultTable").innerHTML=`<div class="toolbar"><button class="secondary" onclick="exportResults()">⇩ Export CSV</button></div><div class="table-wrap"><table class="table"><thead><tr><th>Rank</th><th>Roll</th><th>Name</th><th>Subjects</th><th>Total</th><th>%</th><th>Grade</th><th>Result</th><th>Action</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${r.rank}</td><td>${esc(r.roll_no)}</td><td>${esc(r.full_name)}</td><td>${r.entered}</td><td>${r.total}/${r.max}</td><td>${r.pct.toFixed(2)}</td><td>${r.grade}</td><td><span class="badge ${r.status==="FAIL"?"danger":""}">${r.status}</span></td><td><button class="secondary" onclick="openReport('${r.id}','${ex}')">Report Card</button></td></tr>`).join("")}</tbody></table></div>`;
@@ -292,11 +363,13 @@ async function reports(){
 function reportStudentOptions(){const c=$("rp_class").value;$("rp_student").innerHTML=state.students.filter(s=>s.class_id===c).map(s=>`<option value="${s.id}">${esc(s.roll_no)} - ${esc(s.full_name)}</option>`).join("")}
 async function openReport(studentId,examId){
  const s=state.students.find(x=>x.id===studentId);if(!s)return;
+ await loadSubjectAllocation();
  const ex=state.exams.find(x=>x.id===examId),mr=await state.sb.from("marks").select("*").eq("examination_id",examId).eq("student_id",studentId);if(mr.error){toast(mr.error.message,false);return}
  const coR=await state.sb.from("co_scholastic").select("*").eq("academic_year",YEAR).eq("student_id",studentId).maybeSingle(),co=coR.data||{};
  const atR=await state.sb.from("attendance_records").select("term,status").eq("academic_year",YEAR).eq("student_id",studentId),att=atR.data||[];
  const termStats=["Term-1","Term-2"].map(term=>{const a=att.filter(x=>x.term===term),total=a.length,present=a.filter(x=>x.status==="Present").length;return{term,total,present,pct:total?present/total*100:null}});
- const rows=mr.data||[],ev=rows.filter(x=>x.attendance_status!=="Absent"),total=ev.reduce((a,x)=>a+(Number(x.marks)||0),0),max=ev.reduce((a,x)=>a+(Number(x.max_marks)||100),0),pct=max?total/max*100:0,rank=(state.resultRows.find(x=>x.id===studentId)||{}).rank||"—";
+ const selectedIds=new Set(state.studentChoices.filter(x=>x.student_id===studentId&&x.academic_year===YEAR).map(x=>x.subject_id));
+ const rows=(mr.data||[]).filter(x=>selectedIds.has(x.subject_id)),ev=rows.filter(x=>x.attendance_status!=="Absent"),total=ev.reduce((a,x)=>a+(Number(x.marks)||0),0),max=ev.reduce((a,x)=>a+(Number(x.max_marks)||100),0),pct=max?total/max*100:0,rank=(state.resultRows.find(x=>x.id===studentId)||{}).rank||"—";
  $("reportArea").innerHTML=`<div class="report-card" id="printReport"><div class="report-head"><div>${imgOrPlaceholder(state.settings.logo_left,"Logo")}</div><div><div class="report-title">${esc(schoolName())}</div><div style="font-weight:750">REPORT CARD FOR CLASS ${esc(className(s.class_id))}</div><div>ACADEMIC SESSION: ${YEAR}</div></div><div>${imgOrPlaceholder(state.settings.logo_right,"PM SHRI")}</div></div>
  <hr><div style="display:grid;grid-template-columns:1fr 110px;gap:15px;align-items:start"><div><b>Roll No:</b> ${esc(s.roll_no)}<br><b>Student's Name:</b> ${esc(s.full_name)}<br><b>Name of the Mother:</b> ${esc(s.mother_name)}<br><b>Date of Birth:</b> ${esc(s.date_of_birth)}<br><b>APAAR ID:</b> ${esc(s.apar_id)}<br><b>Name of the Father:</b> ${esc(s.father_name)}<br><b>Section:</b> ${esc(sectionName(s.section_id))}<br><b>House:</b> ${esc(s.house)}</div><div>${s.photo_url?`<img class="student-photo" src="${esc(s.photo_url)}" alt="Student Photo">`:'<div class="student-photo" style="display:grid;place-items:center;font-size:11px">Student Photo</div>'}</div></div>
  <h4>Part A: Scholastic Area</h4><table class="report-table"><thead><tr><th>Subject Name</th><th>Term-1</th><th>Term-2</th><th>Total</th><th>Overall Grade</th></tr></thead><tbody>${rows.map(m=>`<tr><td>${esc(subjectName(m.subject_id))}</td><td>${esc(m.marks??"—")}</td><td>—</td><td>${esc(m.marks??"—")}</td><td>${grade(Number(m.max_marks)?Number(m.marks||0)/Number(m.max_marks)*100:0)}</td></tr>`).join("")}<tr><th>Total</th><th>${total}</th><th>—</th><th>${total}/${max}</th><th>${grade(pct)}</th></tr></tbody></table>
