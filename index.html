@@ -63,12 +63,13 @@ button,input,select,textarea{font:inherit}button{cursor:pointer}.hidden{display:
 </head>
 <body><div id="root"></div>
 <script>
-const SCHOOL_NAME_DYNAMIC = () => localStorage.getItem("jnv_school_name") || "PM SHRI Jawahar Navodaya Vidyalaya, Wargal, Siddipet";
+const DEFAULT_SCHOOL_NAME = "PM SHRI Jawahar Navodaya Vidyalaya, Wargal, Siddipet";
+function getSchoolName(){ return localStorage.getItem("jnv_school_name") || DEFAULT_SCHOOL_NAME; }
 const CONFIG={
   SUPABASE_URL:"https://mnilsvgjuwnniquukedk.supabase.co",
   SUPABASE_ANON_KEY:"sb_publishable_7chu45G-OQ6LfdEd4rL-qw_V1VNNbXi"
 };
-const SCHOOL="${getSchoolName()}";
+const SCHOOL=getSchoolName();
 const YEAR="2026-27";
 const S={
   sb:null,user:null,profile:null,page:"dashboard",
@@ -77,18 +78,50 @@ const S={
 };
 const $=id=>document.getElementById(id);
 
-const MEDIA_KEYS={logoLeft:"jnv_logo_left",logoRight:"jnv_logo_right",vpSignature:"jnv_vp_signature"};
+const MEDIA_KEYS={logoLeft:"jnv_logo_left",logoRight:"jnv_logo_right",vpSignature:"jnv_vp_signature",principalSignature:"jnv_principal_signature"};
 function getImage(key){return localStorage.getItem(key)||""}
 function saveImage(key,file){return new Promise((resolve,reject)=>{if(!file)return resolve("");const r=new FileReader();r.onload=()=>{try{localStorage.setItem(key,r.result);resolve(r.result)}catch(e){reject(new Error("Image too large. Please use a smaller JPG/PNG."))}};r.onerror=()=>reject(new Error("Could not read image."));r.readAsDataURL(file)})}
 function studentPhotoKey(id){return "jnv_student_photo_"+id}
 function getStudentPhoto(id){return localStorage.getItem(studentPhotoKey(id))||""}
-async function saveBranding(){try{const l=$("logoLeftFile")?.files?.[0],r=$("logoRightFile")?.files?.[0],s=$("vpSigFile")?.files?.[0];if(l)await saveImage(MEDIA_KEYS.logoLeft,l);if(r)await saveImage(MEDIA_KEYS.logoRight,r);if(s)await saveImage(MEDIA_KEYS.vpSignature,s);toast("Report-card images saved");brandingForm()}catch(e){toast(e.message,false)}}
-function brandingForm(){const l=getImage(MEDIA_KEYS.logoLeft),r=getImage(MEDIA_KEYS.logoRight),s=getImage(MEDIA_KEYS.vpSignature);modal("Report Card Branding",`<div class="notice"><b>Upload report-card images.</b> These are stored in this browser, so they will appear on report cards made on this device.</div><div class="form-grid"><div class="field"><label>Top-left Logo</label><input id="logoLeftFile" type="file" accept="image/png,image/jpeg,image/webp">${l?`<img class="branding-preview" src="${l}">`:"<div class=mini>No logo uploaded</div>"}</div><div class="field"><label>Top-right Logo</label><input id="logoRightFile" type="file" accept="image/png,image/jpeg,image/webp">${r?`<img class="branding-preview" src="${r}">`:"<div class=mini>No logo uploaded</div>"}</div><div class="field wide"><label>Vice Principal Signature</label><input id="vpSigFile" type="file" accept="image/png,image/jpeg,image/webp">${s?`<img class="signature-preview" src="${s}">`:"<div class=mini>No signature uploaded</div>"}</div></div><div class="actions"><button class="primary" onclick="saveBranding()">Save Images</button><button class="ghost" onclick="localStorage.removeItem(MEDIA_KEYS.logoLeft);localStorage.removeItem(MEDIA_KEYS.logoRight);localStorage.removeItem(MEDIA_KEYS.vpSignature);brandingForm()">Remove Images</button></div>`)}
+async function saveBranding(){
+  try{
+    const l=$("logoLeftFile")?.files?.[0],r=$("logoRightFile")?.files?.[0],
+          v=$("vpSigFile")?.files?.[0],p=$("principalSigFile")?.files?.[0];
+    if(l)await saveImage(MEDIA_KEYS.logoLeft,l);
+    if(r)await saveImage(MEDIA_KEYS.logoRight,r);
+    if(v)await saveImage(MEDIA_KEYS.vpSignature,v);
+    if(p)await saveImage(MEDIA_KEYS.principalSignature,p);
+    toast("Report-card images saved");brandingForm();
+  }catch(e){toast(e.message,false)}
+}
+function brandingForm(){
+  const l=getImage(MEDIA_KEYS.logoLeft),r=getImage(MEDIA_KEYS.logoRight),
+        v=getImage(MEDIA_KEYS.vpSignature),p=getImage(MEDIA_KEYS.principalSignature);
+  modal("Report Card Branding",`<div class="notice"><b>Upload report-card images.</b>
+  They are stored in this browser and will appear on report cards made on this device.</div>
+  <div class="form-grid">
+    <div class="field"><label>Top-left Logo</label><input id="logoLeftFile" type="file" accept="image/png,image/jpeg,image/webp">
+      ${l?`<img class="branding-preview" src="${l}">`:"<div class=mini>No logo uploaded</div>"}</div>
+    <div class="field"><label>Top-right Logo</label><input id="logoRightFile" type="file" accept="image/png,image/jpeg,image/webp">
+      ${r?`<img class="branding-preview" src="${r}">`:"<div class=mini>No logo uploaded</div>"}</div>
+    <div class="field"><label>Vice Principal Signature</label><input id="vpSigFile" type="file" accept="image/png,image/jpeg,image/webp">
+      ${v?`<img class="signature-preview" src="${v}">`:"<div class=mini>No signature uploaded</div>"}</div>
+    <div class="field"><label>Principal Signature</label><input id="principalSigFile" type="file" accept="image/png,image/jpeg,image/webp">
+      ${p?`<img class="signature-preview" src="${p}">`:"<div class=mini>No signature uploaded</div>"}</div>
+  </div>
+  <div class="actions"><button class="primary" onclick="saveBranding()">Save Images</button>
+  <button class="ghost" onclick="removeBranding()">Remove Images</button></div>`)
+}
+function removeBranding(){
+  [MEDIA_KEYS.logoLeft,MEDIA_KEYS.logoRight,MEDIA_KEYS.vpSignature,MEDIA_KEYS.principalSignature].forEach(k=>localStorage.removeItem(k));
+  brandingForm();
+}
 async function saveStudentPhoto(id,file){if(!id||!file)return;try{await saveImage(studentPhotoKey(id),file);toast("Student photo saved")}catch(e){toast(e.message,false)}}
 const esc=x=>String(x??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
 const C=id=>S.classes.find(x=>x.id===id)?.name||"";
 const SEC=id=>S.sections.find(x=>x.id===id)?.name||"";
 const SUB=id=>S.subjects.find(x=>x.id===id)?.name||"";
+const TC=id=>S.teachers.find(x=>x.id===id)?.full_name||"Not Assigned";
 const isAdmin=()=>String(S.profile?.role||"teacher").toLowerCase()==="admin";
 function toast(x,ok=true){const e=$("toast");if(!e)return;e.textContent=x;e.style.background=ok?"#187a45":"#b3261e";e.classList.remove("hidden");setTimeout(()=>e.classList.add("hidden"),3000)}
 function login(){
@@ -112,7 +145,11 @@ function shell(){
  ${nav("results","Results & Analytics","★")}${nav("reportcards","Report Cards","▣")}
  <button onclick="signOut()">⇥ &nbsp;Sign out</button></div></aside>
  <main class="main"><div class="top"><div><h2 id="title">Dashboard</h2><small>${SCHOOL}</small></div>
- <div class="role">${esc(S.profile?.full_name||S.user?.email||"")} · ${esc(S.profile?.role||"teacher")}</div></div>
+ <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+  <button class="secondary no-print" onclick="openSchoolNameSettings()">⚙ School Name</button>
+  <button class="secondary no-print" onclick="brandingForm()">🖼 Branding</button>
+  <div class="role">${esc(S.profile?.full_name||S.user?.email||"")} · ${esc(S.profile?.role||"teacher")}</div>
+</div></div>
  <div id="content"></div></main></div><div id="modal"></div><div id="toast" class="toast hidden"></div>`;
 }
 async function init(){
@@ -254,7 +291,8 @@ function studentForm(id){
  <div class="field"><label>Section</label><select id="se">${S.sections.map(c=>`<option value="${c.id}" ${x.section_id===c.id?"selected":""}>${C(c.class_id)} - ${esc(c.name)}</option>`).join("")}</select></div>
  <div class="field"><label>House</label><input id="ho" value="${esc(x.house)}"></div><div class="field"><label>APAR ID</label><input id="apar" value="${esc(x.apar_id)}"></div><div class="field"><label>Date of Birth</label><input id="dob" type="date" value="${esc(x.date_of_birth)}"></div><div class="field"><label>Father Name</label><input id="fa" value="${esc(x.father_name)}"></div>
  <div class="field"><label>Mother Name</label><input id="mo" value="${esc(x.mother_name)}"></div><div class="field"><label>Parent Phone</label><input id="ph" value="${esc(x.parent_phone||x.phone)}"></div>
- <div class="field wide"><label>Student Photo</label><input id="studentPhotoFile" type="file" accept="image/png,image/jpeg,image/webp" onchange="saveStudentPhoto('${id}',this.files[0])"><div class="mini">Upload passport-size photo. It will appear on the report card.</div>${id&&getStudentPhoto(id)?`<img class="branding-preview" src="${getStudentPhoto(id)}">`:""}</div></div>
+ <div class="field wide"><label>Address</label><textarea id="addr">${esc(x.address||"")}</textarea></div>
+  <div class="field wide"><label>Student Photo</label><input id="studentPhotoFile" type="file" accept="image/png,image/jpeg,image/webp" onchange="saveStudentPhoto('${id}',this.files[0])"><div class="mini">Upload passport-size photo. It will appear on the report card.</div>${id&&getStudentPhoto(id)?`<img class="branding-preview" src="${getStudentPhoto(id)}">`:""}</div></div>
  <button class="primary full" onclick="saveStudent('${id||""}')">Save Student</button>`)
 }
 async function saveStudent(id){
@@ -262,7 +300,7 @@ async function saveStudent(id){
  const r=id?await S.sb.from("students").update(o).eq("id",id):await S.sb.from("students").insert(o);
  if(r.error)return toast(r.error.message,false);closeModal();toast("Student saved");students();
 }
-async function classes(){await lookups();$("content").innerHTML=`<div class="section-title"><h3>Classes</h3><div class="actions">${bulkControls("classes","Class",["name","display_order","active"],[["VI",6,true]])}</div></div>${tbl(["Class","Order","Active","Action"],S.classes.map(x=>`<tr><td>${esc(x.name)}</td><td>${x.display_order??""}</td><td>${x.active===false?"No":"Yes"}</td><td class="actions"><button class="secondary" onclick="editSimple('classes','${x.id}','Class',[["name","Class Name"],["display_order","Display Order","number"],["active","Active"]])">Edit</button><button class="danger" onclick="deleteSimple('classes','${x.id}','Class')">Delete</button></td></tr>`).join(""))}<div class="section-title"><h3>Sections</h3><div class="actions">${bulkControls("sections","Section",["class_id","name","active"],[["CLASS_ID","A",true]])}</div></div>${tbl(["Class","Section","Active","Action"],S.sections.map(x=>`<tr><td>${C(x.class_id)}</td><td>${esc(x.name)}</td><td>${x.active===false?"No":"Yes"}</td><td class="actions"><button class="secondary" onclick="editSimple('sections','${x.id}','Section',[["class_id","Class ID"],["name","Section Name"],["active","Active"]])">Edit</button><button class="danger" onclick="deleteSimple('sections','${x.id}','Section')">Delete</button></td></tr>`).join(""))}`}
+async function classes(){await lookups();$("content").innerHTML=`<div class="section-title"><h3>Classes</h3><div class="actions">${bulkControls("classes","Class",["name","display_order","active"],[["VI",6,true]])}</div></div>${tbl(["Class","Order","Active","Action"],S.classes.map(x=>`<tr><td>${esc(x.name)}</td><td>${x.display_order??""}</td><td>${x.active===false?"No":"Yes"}</td><td class="actions"><button class="secondary" onclick="editSimple('classes','${x.id}','Class',[["name","Class Name"],["display_order","Display Order","number"],["active","Active"]])">Edit</button><button class="danger" onclick="deleteSimple('classes','${x.id}','Class')">Delete</button></td></tr>`).join(""))}<div class="section-title"><h3>Sections</h3><div class="actions">${bulkControls("sections","Section",["class_id","name","active"],[["CLASS_ID","A",true]])}</div></div>${tbl(["Class","Section","Active","Action"],S.sections.map(x=>`<tr><td>${C(x.class_id)}</td><td>${esc(x.name)}</td><td>${x.active===false?"No":"Yes"}</td><td class="actions"><button class="secondary" onclick="editSectionForm('${x.id}')">Edit</button><button class="danger" onclick="deleteSimple('sections','${x.id}','Section')">Delete</button></td></tr>`).join(""))}`}
 
 async function subjects(){await lookups();$("content").innerHTML=`<div class="section-title"><h3>Subjects</h3><div class="actions">${bulkControls("subjects","Subject",["name","subject_name","code","class_id","active"],[["Physics","","PHY","",true]])}</div></div>${tbl(["Subject","Code","Class","Active","Action"],S.subjects.map(x=>`<tr><td>${esc(x.name||x.subject_name)}</td><td>${esc(x.code)}</td><td>${C(x.class_id)||"All"}</td><td>${x.active===false?"No":"Yes"}</td><td class="actions"><button class="secondary" onclick="editSimple('subjects','${x.id}','Subject',[["name","Subject Name"],["code","Code"]])">Edit</button><button class="danger" onclick="deleteSimple('subjects','${x.id}','Subject')">Delete</button></td></tr>`).join(""))}`}
 
@@ -401,7 +439,7 @@ async function showReport(){
  }).join("");
  $("reportArea").innerHTML=`<div class="report" id="printReport">
  <div class="report-header"><div class="report-logo">${getImage(MEDIA_KEYS.logoLeft)?`<img src="${getImage(MEDIA_KEYS.logoLeft)}" alt="Logo">`:"JNV<br>LOGO"}</div><div class="report-title">
- <h2>JAWAHAR NAVODAYA VIDYALAYA</h2><h3>REPORT CARD FOR CLASS ${esc(C(st.class_id))}</h3><p>ACADEMIC SESSION: ${YEAR}</p></div><div class="report-logo">${getImage(MEDIA_KEYS.logoRight)?`<img src="${getImage(MEDIA_KEYS.logoRight)}" alt="Logo">`:"LOGO"}</div></div>
+ <h2>${esc(SCHOOL)}</h2><h3>REPORT CARD FOR CLASS ${esc(C(st.class_id))}</h3><p>ACADEMIC SESSION: ${YEAR}</p></div><div class="report-logo">${getImage(MEDIA_KEYS.logoRight)?`<img src="${getImage(MEDIA_KEYS.logoRight)}" alt="Logo">`:"LOGO"}</div></div>
  <div class="student-info-wrap">
    <div class="student-info">
     <div><b>Roll No:</b> ${esc(st.roll_no)}</div><div><b>APAR ID:</b> ${esc(st.apar_id||"")}</div>
@@ -409,7 +447,7 @@ async function showReport(){
     <div><b>Name of the Mother:</b> ${esc(st.mother_name)}</div><div><b>Name of the Father:</b> ${esc(st.father_name)}</div>
     <div><b>Date of Birth:</b> ${esc(st.date_of_birth||"")}</div><div><b>House:</b> ${esc(st.house||"")}</div>
    </div>
-   <div class="report-student-photo">${getStudentPhoto(st.id)?`<img src="${getStudentPhoto(st.id)}" alt="Student Photo">`:'Photograph'}</div>
+   <div class="report-student-photo" title="Student photograph">${getStudentPhoto(st.id)?`<img src="${getStudentPhoto(st.id)}" alt="Student Photo">`:'Student Photo'}</div>
  </div>
  <div class="part-title">Part A: Scholastic Area</div>
  <div class="table-wrap"><table><thead><tr><th>Subject Name</th><th>Term-1</th><th>Term-2</th><th>Total</th><th>Overall Grade</th></tr></thead><tbody>${rows||'<tr><td colspan="5">No marks found in the supported marks tables.</td></tr>'}</tbody></table></div>
@@ -428,8 +466,8 @@ async function showReport(){
  <tbody><tr><td>Term-1</td><td>—</td><td>—</td><td>—</td></tr><tr><td>Term-2</td><td>—</td><td>—</td><td>—</td></tr></tbody></table>
  <div class="sign">
    <div class="sign-box"><div class="sign-img"></div><div class="sign-line">Signature of Class Teacher</div></div>
+   <div class="sign-box"><div class="sign-img">${getImage(MEDIA_KEYS.principalSignature)?`<img src="${getImage(MEDIA_KEYS.principalSignature)}" alt="Principal Signature">`:""}</div><div class="sign-line">Signature of Principal</div></div>
    <div class="sign-box"><div class="sign-img">${getImage(MEDIA_KEYS.vpSignature)?`<img src="${getImage(MEDIA_KEYS.vpSignature)}" alt="Vice Principal Signature">`:""}</div><div class="sign-line">Signature of Vice Principal</div></div>
-   <div class="sign-box"><div class="sign-img"></div><div class="sign-line">Signature of Principal</div></div>
  </div>
  <div class="small-note" style="margin-top:20px"><b>Grading Scale for Co-scholastic Areas:</b> A — Exemplary, B — Proficient, C — Developing, D — Emerging, E — Beginner.</div>
  <div class="small-note" style="margin-top:8px"><b>Grading Scale for Discipline:</b> A — Outstanding, B — Very Good, C — Fair.</div>
@@ -450,8 +488,7 @@ init();
 
 <script>
 function getSchoolName(){
-  return localStorage.getItem("jnv_school_name") ||
-    "${getSchoolName()}";
+  return localStorage.getItem("jnv_school_name") || DEFAULT_SCHOOL_NAME;
 }
 function openSchoolNameSettings(){
   const old=document.getElementById("schoolNameSettings");
@@ -553,7 +590,7 @@ async function classes(){
   <div class="notice">For bulk sections, first create the classes. The <b>class_id</b> column must contain the UUID shown by Supabase for that class.</div>
   ${tbl(["Class","Section","Active","Action"],S.sections.map(x=>`<tr>
     <td>${C(x.class_id)}</td><td>${esc(x.name)}</td><td>${x.active===false?"No":"Yes"}</td>
-    <td class="actions"><button class="secondary" onclick="editSimple('sections','${x.id}','Section',[["class_id","Class ID"],["name","Section Name"],["active","Active"]])">Edit</button>
+    <td class="actions"><button class="secondary" onclick="editSectionForm('${x.id}')">Edit</button>
     <button class="danger" onclick="deleteSimple('sections','${x.id}','Section')">Delete</button></td>
   </tr>`).join(""))}
 
@@ -568,6 +605,26 @@ async function classes(){
   </div>
   <div class="notice">Use this for optional/elective subjects. Each student can have a different subject combination.</div>
   <button class="secondary" onclick="studentChoiceForm()">Open Subject Choice Manager</button>`;
+}
+
+
+
+async function editSectionForm(id){
+  await lookups();
+  const x=S.sections.find(a=>a.id===id);if(!x)return toast("Section not found",false);
+  modal("Edit Section",`<div class="form-grid">
+    <div class="field"><label>Class</label><select id="esClass">${S.classes.map(c=>`<option value="${c.id}" ${c.id===x.class_id?"selected":""}>${esc(c.name)}</option>`).join("")}</select></div>
+    <div class="field"><label>Section Name</label><input id="esName" value="${esc(x.name)}"></div>
+    <div class="field"><label>Active</label><select id="esActive"><option value="true" ${x.active!==false?"selected":""}>Yes</option><option value="false" ${x.active===false?"selected":""}>No</option></select></div>
+  </div><button class="primary full" onclick="saveSectionEdit('${id}')">Save Changes</button>`);
+}
+async function saveSectionEdit(id){
+  const o={class_id:$("esClass").value,name:$("esName").value.trim(),active:$("esActive").value==="true"};
+  if(!o.name)return toast("Enter section name",false);
+  const r=await S.sb.from("sections").update(o).eq("id",id).select("id");
+  if(r.error)return toast(r.error.message,false);
+  if(!r.data?.length)return toast("Update was not allowed by Supabase RLS.",false);
+  closeModal();toast("Section updated");await go("classes");
 }
 
 async function classTeacherForm(){
@@ -589,6 +646,32 @@ async function saveClassTeacher(){
   const r=await S.sb.from("class_teacher_assignments").upsert(o,{onConflict:"class_id,section_id,academic_year"});
   if(r.error)return toast(r.error.message,false);
   closeModal();toast("Class teacher assigned");await go("classes");
+}
+
+
+async function editClassTeacherForm(id){
+  await lookups();
+  const r=await S.sb.from("class_teacher_assignments").select("*").eq("id",id).maybeSingle();
+  if(r.error)return toast(r.error.message,false);
+  const x=r.data;if(!x)return toast("Assignment not found",false);
+  modal("Edit Class Teacher",`<div class="form-grid">
+    <div class="field"><label>Class</label><select id="ectClass" onchange="ectLoadSections()">${S.classes.map(c=>`<option value="${c.id}" ${c.id===x.class_id?"selected":""}>${esc(c.name)}</option>`).join("")}</select></div>
+    <div class="field"><label>Section</label><select id="ectSection"></select></div>
+    <div class="field wide"><label>Teacher</label><select id="ectTeacher">${S.teachers.map(t=>`<option value="${t.id}" ${t.id===x.teacher_id?"selected":""}>${esc(t.full_name)}</option>`).join("")}</select></div>
+  </div><button class="primary full" onclick="saveEditedClassTeacher('${id}')">Save Changes</button>`);
+  ectLoadSections(x.section_id);
+}
+function ectLoadSections(selected){
+  const cl=$("ectClass"),se=$("ectSection");if(!cl||!se)return;
+  se.innerHTML=S.sections.filter(x=>x.class_id===cl.value).map(x=>`<option value="${x.id}" ${x.id===selected?"selected":""}>${esc(x.name)}</option>`).join("");
+}
+async function saveEditedClassTeacher(id){
+  const o={class_id:$("ectClass").value,section_id:$("ectSection").value,teacher_id:$("ectTeacher").value,academic_year:YEAR};
+  if(!o.section_id||!o.teacher_id)return toast("Select section and teacher",false);
+  const r=await S.sb.from("class_teacher_assignments").update(o).eq("id",id).select("id");
+  if(r.error)return toast(r.error.message,false);
+  if(!r.data?.length)return toast("Update was not allowed by Supabase RLS.",false);
+  closeModal();toast("Class teacher updated");await go("classes");
 }
 
 async function studentChoiceForm(){
